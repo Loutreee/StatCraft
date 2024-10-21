@@ -1,0 +1,4 @@
+name: StatCraft
+version: '1.0-SNAPSHOT'
+main: me.loutreee.statCraft.StatCraft
+api-version: '1.21'
