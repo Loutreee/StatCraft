@@ -422,6 +422,15 @@ public final class StatCraft extends JavaPlugin implements Listener {
                             // Ignorer les exceptions si l'entité n'a pas de statistique associée
                         }
                     }
+                } else if (statistic == Statistic.CRAFT_ITEM) {
+                    // Réinitialiser les objets craftés pour chaque type d'objet
+                    for (Material material : Material.values()) {
+                        try {
+                            player.setStatistic(Statistic.CRAFT_ITEM, material, 0);
+                        } catch (IllegalArgumentException e) {
+                            // Ignorer les exceptions si l'objet n'a pas de statistique associée
+                        }
+                    }
                 } else {
                     // Réinitialiser les autres statistiques globales (comme PLAY_ONE_MINUTE)
                     try {
