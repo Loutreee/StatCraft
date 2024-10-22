@@ -29,22 +29,20 @@ import java.io.File;
 import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import org.bukkit.plugin.java.JavaPlugin;
-import org.bukkit.scheduler.BukkitRunnable;
-
-import java.io.File;
 
 
 
 public final class StatCraft extends JavaPlugin implements Listener {
 
     private File overworldToWatch;
+    private Score scoreCalculator;
 
     @Override
     public void onEnable() {
         // Plugin startup logic
         this.getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("Le plugin est activé !");
+        scoreCalculator = new Score();
 
         World world = this.getServer().getWorlds().getFirst(); // Récupère le premier monde (souvent le monde principal)
         checkServerGameMode(world);
@@ -53,6 +51,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
         //resetAllPlayersStatsInMemory();
 
         overworldToWatch = new File(getDataFolder().getParent(), "overworld");
+
         new FolderCheckTask().runTaskTimer(this, 0L, 200L);
 
         new BukkitRunnable() {
@@ -100,28 +99,6 @@ public final class StatCraft extends JavaPlugin implements Listener {
         }
     }
 
-    public void deletePlayerStatFiles() {
-        World world = getServer().getWorlds().getFirst(); // Récupère le premier monde
-        File statsDirectory = new File(world.getWorldFolder(), "stats");
-
-        if (statsDirectory.exists() && statsDirectory.isDirectory()) {
-            File[] files = statsDirectory.listFiles();
-
-            if (files != null) {
-                for (File file : files) {
-                    if (file.getName().endsWith(".json")) {
-                        if (file.delete()) {
-                            getLogger().info("Fichier de stats " + file.getName() + " supprimé.");
-                        } else {
-                            getLogger().warning("Impossible de supprimer " + file.getName());
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-
     private int sessionNumber = 0;  // Identifiant de la session
     private final Map<String, Integer> playerSessions = new HashMap<>();
     private final Map<String, Integer> initialStats = new HashMap<>();
@@ -152,64 +129,211 @@ public final class StatCraft extends JavaPlugin implements Listener {
         }
     }
 
-    public void resetSinglePlayerStatistics(Player player) {
-        lastStats.put(player.getName() + "_blocks", 0);
-        lastStats.put(player.getName() + "_mobs", 0);
-        lastStats.put(player.getName() + "_playTime", 0);
-    }
-
     public String getCurrentTimestamp() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd_HH-mm-ss");
         return LocalDateTime.now(ZoneId.of("Europe/Paris")).format(formatter);
     }
 
-    public void writeStatistics(String playerName, int blocksMined, int mobsKilled, int playTimeMinutes) {
+    public void writeStatistics(String playerName, int blocksMined, int mobsKilled, int playTimeMinutes, int playerScore, Score scoreCalculator, Player player) {
         try {
-            // Récupérer la date et l'heure actuelles
             String timestamp = getCurrentTimestamp();
 
-            // Chemin vers le dossier de la session actuelle, puis le dossier du joueur
             File directory = new File("player_statistics/session" + sessionNumber + "/" + playerName);
             if (!directory.exists()) {
-                directory.mkdirs(); // Créer le dossier s'il n'existe pas
+                directory.mkdirs();
             }
 
-            // Création du document XML (même logique que précédemment)
+            // Création du document XML
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder = factory.newDocumentBuilder();
             Document doc = builder.newDocument();
 
+            // Racine du document
             Element rootElement = doc.createElement("joueur");
             rootElement.setAttribute("nom", playerName);
             doc.appendChild(rootElement);
 
-            Element mortElement = doc.createElement("statistiques");
-            rootElement.appendChild(mortElement);
-
+            // Détails des blocs minés
             Element blocksElement = doc.createElement("blocsMines");
-            blocksElement.appendChild(doc.createTextNode(String.valueOf(blocksMined)));
-            mortElement.appendChild(blocksElement);
+            rootElement.appendChild(blocksElement);
 
+            // Ajouter les détails de chaque minerai miné
+            addBlockDetails(doc, blocksElement, player, Material.DIAMOND_ORE, "Diamant");
+            addBlockDetails(doc, blocksElement, player, Material.ANCIENT_DEBRIS, "Débris antiques");
+            addBlockDetails(doc, blocksElement, player, Material.GOLD_ORE, "Or");
+            addBlockDetails(doc, blocksElement, player, Material.IRON_ORE, "Fer");
+            addBlockDetails(doc, blocksElement, player, Material.COAL_ORE, "Charbon");
+            addBlockDetails(doc, blocksElement, player, Material.EMERALD_ORE, "Émeraude");
+            addBlockDetails(doc, blocksElement, player, Material.LAPIS_ORE, "Lapis Lazuli");
+            addBlockDetails(doc, blocksElement, player, Material.REDSTONE_ORE, "Redstone");
+
+            // Ajouter le total des blocs minés
+            Element totalBlocksElement = doc.createElement("totalBlocsMines");
+            totalBlocksElement.appendChild(doc.createTextNode(String.valueOf(blocksMined)));
+            blocksElement.appendChild(totalBlocksElement);
+
+            // Détails des mobs tués
             Element mobsElement = doc.createElement("mobsTues");
-            mobsElement.appendChild(doc.createTextNode(String.valueOf(mobsKilled)));
-            mortElement.appendChild(mobsElement);
+            rootElement.appendChild(mobsElement);
 
+            // Ajouter les détails de chaque monstre tué
+            addMobDetails(doc, mobsElement, player, EntityType.ENDERMAN, "Enderman");
+            addMobDetails(doc, mobsElement, player, EntityType.WITHER_SKELETON, "Wither Skeleton");
+            addMobDetails(doc, mobsElement, player, EntityType.BLAZE, "Blaze");
+            addMobDetails(doc, mobsElement, player, EntityType.CREEPER, "Creeper");
+            addMobDetails(doc, mobsElement, player, EntityType.GHAST, "Ghast");
+            addMobDetails(doc, mobsElement, player, EntityType.ZOMBIE, "Zombie");
+            addMobDetails(doc, mobsElement, player, EntityType.SKELETON, "Squelette");
+
+            // Ajouter le total des mobs tués
+            Element totalMobsElement = doc.createElement("totalMobsTues");
+            totalMobsElement.appendChild(doc.createTextNode(String.valueOf(mobsKilled)));
+            mobsElement.appendChild(totalMobsElement);
+
+            // Détails des objets craftés
+            Element craftElement = doc.createElement("objetsCraftes");
+            rootElement.appendChild(craftElement);
+
+            // Ajouter les détails pour les outils/armes de chaque type et matériau
+            // Épées
+            addCraftDetails(doc, craftElement, player, Material.WOODEN_SWORD, "Épée en bois");
+            addCraftDetails(doc, craftElement, player, Material.STONE_SWORD, "Épée en pierre");
+            addCraftDetails(doc, craftElement, player, Material.IRON_SWORD, "Épée en fer");
+            addCraftDetails(doc, craftElement, player, Material.DIAMOND_SWORD, "Épée en diamant");
+            addCraftDetails(doc, craftElement, player, Material.NETHERITE_SWORD, "Épée en netherite");
+
+            // Pioches
+            addCraftDetails(doc, craftElement, player, Material.WOODEN_PICKAXE, "Pioche en bois");
+            addCraftDetails(doc, craftElement, player, Material.STONE_PICKAXE, "Pioche en pierre");
+            addCraftDetails(doc, craftElement, player, Material.IRON_PICKAXE, "Pioche en fer");
+            addCraftDetails(doc, craftElement, player, Material.DIAMOND_PICKAXE, "Pioche en diamant");
+            addCraftDetails(doc, craftElement, player, Material.NETHERITE_PICKAXE, "Pioche en netherite");
+
+            // Haches
+            addCraftDetails(doc, craftElement, player, Material.WOODEN_AXE, "Hache en bois");
+            addCraftDetails(doc, craftElement, player, Material.STONE_AXE, "Hache en pierre");
+            addCraftDetails(doc, craftElement, player, Material.IRON_AXE, "Hache en fer");
+            addCraftDetails(doc, craftElement, player, Material.DIAMOND_AXE, "Hache en diamant");
+            addCraftDetails(doc, craftElement, player, Material.NETHERITE_AXE, "Hache en netherite");
+
+            // Pelles
+            addCraftDetails(doc, craftElement, player, Material.WOODEN_SHOVEL, "Pelle en bois");
+            addCraftDetails(doc, craftElement, player, Material.STONE_SHOVEL, "Pelle en pierre");
+            addCraftDetails(doc, craftElement, player, Material.IRON_SHOVEL, "Pelle en fer");
+            addCraftDetails(doc, craftElement, player, Material.DIAMOND_SHOVEL, "Pelle en diamant");
+            addCraftDetails(doc, craftElement, player, Material.NETHERITE_SHOVEL, "Pelle en netherite");
+
+            // Armures en cuir
+            addCraftDetails(doc, craftElement, player, Material.LEATHER_HELMET, "Casque en cuir");
+            addCraftDetails(doc, craftElement, player, Material.LEATHER_CHESTPLATE, "Plastron en cuir");
+            addCraftDetails(doc, craftElement, player, Material.LEATHER_LEGGINGS, "Jambières en cuir");
+            addCraftDetails(doc, craftElement, player, Material.LEATHER_BOOTS, "Bottes en cuir");
+
+            // Armures en fer
+            addCraftDetails(doc, craftElement, player, Material.IRON_HELMET, "Casque en fer");
+            addCraftDetails(doc, craftElement, player, Material.IRON_CHESTPLATE, "Plastron en fer");
+            addCraftDetails(doc, craftElement, player, Material.IRON_LEGGINGS, "Jambières en fer");
+            addCraftDetails(doc, craftElement, player, Material.IRON_BOOTS, "Bottes en fer");
+
+            // Armures en diamant
+            addCraftDetails(doc, craftElement, player, Material.DIAMOND_HELMET, "Casque en diamant");
+            addCraftDetails(doc, craftElement, player, Material.DIAMOND_CHESTPLATE, "Plastron en diamant");
+            addCraftDetails(doc, craftElement, player, Material.DIAMOND_LEGGINGS, "Jambières en diamant");
+            addCraftDetails(doc, craftElement, player, Material.DIAMOND_BOOTS, "Bottes en diamant");
+
+            // Armures en netherite
+            addCraftDetails(doc, craftElement, player, Material.NETHERITE_HELMET, "Casque en netherite");
+            addCraftDetails(doc, craftElement, player, Material.NETHERITE_CHESTPLATE, "Plastron en netherite");
+            addCraftDetails(doc, craftElement, player, Material.NETHERITE_LEGGINGS, "Jambières en netherite");
+            addCraftDetails(doc, craftElement, player, Material.NETHERITE_BOOTS, "Bottes en netherite");
+
+            // Ajouter le total des objets craftés (si tu veux également un total ici, tu peux le calculer)
+            int totalItemsCrafted = calculateTotalCraftedItems(player);
+            Element totalCraftElement = doc.createElement("totalObjetsCraftes");
+            totalCraftElement.appendChild(doc.createTextNode(String.valueOf(totalItemsCrafted)));
+            craftElement.appendChild(totalCraftElement);
+
+            // Détails du temps de jeu
             Element playTimeElement = doc.createElement("tempsDeJeu");
             playTimeElement.appendChild(doc.createTextNode(String.valueOf(playTimeMinutes)));
-            mortElement.appendChild(playTimeElement);
+            rootElement.appendChild(playTimeElement);
 
-            // Sauvegarder le fichier XML du joueur dans son propre dossier, horodaté
+            // Détails du score global
+            Element scoreElement = doc.createElement("scoreTotal");
+            scoreElement.appendChild(doc.createTextNode(String.valueOf(playerScore)));
+            rootElement.appendChild(scoreElement);
+
+            // Sauvegarder le fichier XML du joueur
             TransformerFactory transformerFactory = TransformerFactory.newInstance();
             Transformer transformer = transformerFactory.newTransformer();
             DOMSource source = new DOMSource(doc);
             StreamResult result = new StreamResult(new File(directory, timestamp + ".xml"));
             transformer.transform(source, result);
 
-            getLogger().info("Statistiques enregistrées pour " + playerName + " à " + timestamp);
+            getLogger().info("Statistiques détaillées enregistrées pour " + playerName + " à " + timestamp);
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
+
+    public int calculateTotalCraftedItems(Player player) {
+        int totalCraftedItems = 0;
+
+        // Parcourir tous les types d'outils, armes, armures, etc. fabriqués
+        Material[] craftableItems = {
+                Material.WOODEN_SWORD, Material.STONE_SWORD, Material.IRON_SWORD, Material.DIAMOND_SWORD, Material.NETHERITE_SWORD,
+                Material.WOODEN_PICKAXE, Material.STONE_PICKAXE, Material.IRON_PICKAXE, Material.DIAMOND_PICKAXE, Material.NETHERITE_PICKAXE,
+                Material.WOODEN_AXE, Material.STONE_AXE, Material.IRON_AXE, Material.DIAMOND_AXE, Material.NETHERITE_AXE,
+                Material.WOODEN_SHOVEL, Material.STONE_SHOVEL, Material.IRON_SHOVEL, Material.DIAMOND_SHOVEL, Material.NETHERITE_SHOVEL,
+                Material.LEATHER_HELMET, Material.IRON_HELMET, Material.DIAMOND_HELMET, Material.NETHERITE_HELMET,
+                Material.LEATHER_CHESTPLATE, Material.IRON_CHESTPLATE, Material.DIAMOND_CHESTPLATE, Material.NETHERITE_CHESTPLATE,
+                Material.LEATHER_LEGGINGS, Material.IRON_LEGGINGS, Material.DIAMOND_LEGGINGS, Material.NETHERITE_LEGGINGS,
+                Material.LEATHER_BOOTS, Material.IRON_BOOTS, Material.DIAMOND_BOOTS, Material.NETHERITE_BOOTS
+        };
+
+        // Additionner tous les objets fabriqués pour chaque matériau
+        for (Material material : craftableItems) {
+            int itemsCrafted = player.getStatistic(Statistic.CRAFT_ITEM, material);
+            totalCraftedItems += itemsCrafted;
+        }
+
+        return totalCraftedItems;
+    }
+
+
+    // Fonction pour ajouter des détails sur chaque bloc miné
+    private void addBlockDetails(Document doc, Element parentElement, Player player, Material material, String materialName) {
+        int blocksMined = player.getStatistic(Statistic.MINE_BLOCK, material);
+        if (blocksMined > 0) {
+            Element blockElement = doc.createElement("minerai");
+            blockElement.setAttribute("nom", materialName);
+            blockElement.appendChild(doc.createTextNode(String.valueOf(blocksMined)));
+            parentElement.appendChild(blockElement);
+        }
+    }
+
+    // Fonction pour ajouter des détails sur chaque monstre tué
+    private void addMobDetails(Document doc, Element parentElement, Player player, EntityType entityType, String entityName) {
+        int mobsKilled = player.getStatistic(Statistic.KILL_ENTITY, entityType);
+        if (mobsKilled > 0) {
+            Element mobElement = doc.createElement("monstre");
+            mobElement.setAttribute("nom", entityName);
+            mobElement.appendChild(doc.createTextNode(String.valueOf(mobsKilled)));
+            parentElement.appendChild(mobElement);
+        }
+    }
+
+    // Fonction pour ajouter des détails sur chaque objet crafté
+    private void addCraftDetails(Document doc, Element parentElement, Player player, Material material, String materialName) {
+        int itemsCrafted = player.getStatistic(Statistic.CRAFT_ITEM, material);
+        if (itemsCrafted > 0) {
+            Element craftElement = doc.createElement("objet");
+            craftElement.setAttribute("nom", materialName);
+            craftElement.appendChild(doc.createTextNode(String.valueOf(itemsCrafted)));
+            parentElement.appendChild(craftElement);
+        }
+    }
+
 
     private final Map<String, Integer> lastStats = new HashMap<>();
 
@@ -237,45 +361,18 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 int mobsKilledDiff = totalMobsKilled - initialMobsKilled;
                 int playTimeDiff = playTimeMinutes - initialPlayTime;
 
+                //Calcul le score
+                int playerScore = scoreCalculator.calculatePlayerScore(player, playTimeDiff);
+
                 // Afficher les écarts des statistiques par rapport aux valeurs initiales
                 getLogger().info(player.getName() + " a miné " + blocksMinedDiff + " blocs depuis le début de la session.");
                 getLogger().info(player.getName() + " a tué " + mobsKilledDiff + " monstres depuis le début de la session.");
                 getLogger().info(player.getName() + " a joué " + playTimeDiff + " minutes depuis le début de la session.");
+                getLogger().info(player.getName() + " a un score de " + playerScore + " points.");
 
                 // Enregistrer les nouvelles statistiques dans un fichier XML
-                writeStatistics(player.getName(), blocksMinedDiff, mobsKilledDiff, playTimeDiff);
+                writeStatistics(player.getName(), blocksMinedDiff, mobsKilledDiff, playTimeDiff, playerScore, scoreCalculator, player);
             }
-        }
-    }
-
-
-    public void deleteAllPlayersDataFiles() {
-        try {
-            World world = getServer().getWorlds().getFirst();
-            File playerDataDirectory = new File(world.getWorldFolder(), "stats");
-
-            if (playerDataDirectory.exists() && playerDataDirectory.isDirectory()) {
-                File[] files = playerDataDirectory.listFiles();
-
-                if (files != null) {
-                    for (File file : files) {
-                        if (file.isFile() && file.getName().endsWith(".json")) {
-                            boolean deleted = file.delete();
-                            if (deleted) {
-                                getLogger().info("Fichier " + file.getName() + " supprimé.");
-                            } else {
-                                getLogger().info("Impossible de supprimer " + file.getName());
-                            }
-                        }
-                    }
-                } else {
-                    getLogger().warning("Aucun fichier trouvé dans 'playerdata'.");
-                }
-            } else {
-                getLogger().warning("Le répertoire 'playerdata' n'existe pas.");
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
         }
     }
 
@@ -301,35 +398,6 @@ public final class StatCraft extends JavaPlugin implements Listener {
         }
 
         return total;
-    }
-
-    public void resetPlayerStatistics() {
-        int currentSession = sessionNumber;  // Obtenir la session actuelle
-
-        for (Player player : getServer().getOnlinePlayers()) {
-            // Réinitialise les statistiques pour chaque joueur connecté
-            initialStats.put(player.getName() + "_blocks", 0);
-            initialStats.put(player.getName() + "_mobs", 0);
-            initialStats.put(player.getName() + "_playTime", 0);
-
-            lastStats.put(player.getName() + "_blocks", 0);
-            lastStats.put(player.getName() + "_mobs", 0);
-            lastStats.put(player.getName() + "_playTime", 0);
-
-            playerSessions.put(player.getName(), currentSession);  // Associer chaque joueur à la session actuelle
-            getLogger().info("Statistiques réinitialisées pour le joueur : " + player.getName() + " dans la session " + currentSession);
-        }
-    }
-
-    public void resetPlayerStatsInMemory(Player player) {
-        for (Statistic stat : Statistic.values()) {
-            try {
-                // Réinitialiser toutes les statistiques qui n'ont pas besoin de paramètres supplémentaires
-                player.setStatistic(stat, 0);
-            } catch (IllegalArgumentException e) {
-                // Certaines statistiques nécessitent des paramètres, tu peux les gérer ici
-            }
-        }
     }
 
     public void resetAllPlayersStatsInMemory() {
