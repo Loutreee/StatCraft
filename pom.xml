@@ -40,6 +40,9 @@
                         </goals>
                     </execution>
                 </executions>
+                <configuration>
+                    <createDependencyReducedPom>false</createDependencyReducedPom>
+                </configuration>
             </plugin>
         </plugins>
         <resources>
@@ -57,7 +60,7 @@
         </repository>
         <repository>
             <id>central</id>
-            <url>https://repo.maven.apache.org/maven2</url>
+            <url>https://repo1.maven.org/maven2</url>
         </repository>
         <repository>
             <id>sonatype</id>
@@ -77,12 +80,6 @@
             <artifactId>velocity-api</artifactId>
             <version>3.4.0-SNAPSHOT</version>
             <scope>provided</scope>
-        </dependency>
-        <!-- Jetty Server -->
-        <dependency>
-            <groupId>org.eclipse.jetty</groupId>
-            <artifactId>jetty-server</artifactId>
-            <version>11.0.14</version> <!-- Assure-toi d'utiliser la version compatible -->
         </dependency>
     </dependencies>
 </project>

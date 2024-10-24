@@ -30,8 +30,6 @@ import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 
-
-
 public final class StatCraft extends JavaPlugin implements Listener {
 
     private File overworldToWatch;
@@ -454,8 +452,6 @@ public final class StatCraft extends JavaPlugin implements Listener {
             getLogger().info("Statistiques réinitialisées pour le joueur: " + player.getName() + " dans la session " + sessionNumber);
         }
     }
-
-
 
 
 
