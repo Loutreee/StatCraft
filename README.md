@@ -18,6 +18,8 @@ statistique.
 
 StatCraft serveur peut être utilisé pour afficher les données récolté par StatCraft dans un interface web.
 
+Lien vers le GitHub : [StatCraft-server](https://github.com/Loutreee/StatCraft)
+
 ## Avancement
 
 Voici la mise à jour avec les tableaux séparés :
