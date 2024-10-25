@@ -47,7 +47,7 @@ public class Score {
                 }
             } else {
                 // Donner 1 point pour tout autre bloc
-                blockScore += blocksMined;
+                blockScore += blocksMined / 2;
             }
         }
 
