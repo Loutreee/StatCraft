@@ -40,7 +40,14 @@ public final class StatCraft extends JavaPlugin implements Listener {
         // Plugin startup logic
         this.getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("Le plugin est activé !");
-        scoreCalculator = new Score();
+
+        saveDefaultConfig();
+
+        ConfigLoader configLoader = new ConfigLoader();
+        File configFile = new File(getDataFolder(), "config.yml");
+        configLoader.loadConfig(configFile);
+
+        this.scoreCalculator = new Score(configLoader);
 
         World world = this.getServer().getWorlds().getFirst(); // Récupère le premier monde (souvent le monde principal)
         checkServerGameMode(world);
@@ -132,7 +139,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
         return LocalDateTime.now(ZoneId.of("Europe/Paris")).format(formatter);
     }
 
-    public void writeStatistics(String playerName, int blocksMined, int mobsKilled, int playTimeMinutes, int playerScore, Score scoreCalculator, Player player) {
+    public void writeStatistics(String playerName, int totalBlocksMined, int mobsKilled, int playTimeMinutes, int playerScore, Score scoreCalculator, Player player) {
         try {
             String timestamp = getCurrentTimestamp();
 
@@ -155,33 +162,36 @@ public final class StatCraft extends JavaPlugin implements Listener {
             Element blocksElement = doc.createElement("blocsMines");
             rootElement.appendChild(blocksElement);
 
-            // Ajouter les détails de chaque minerai miné
-            addBlockDetails(doc, blocksElement, player, Material.DIAMOND_ORE, "Diamant");
-            addBlockDetails(doc, blocksElement, player, Material.ANCIENT_DEBRIS, "Débris antiques");
-            addBlockDetails(doc, blocksElement, player, Material.GOLD_ORE, "Or");
-            addBlockDetails(doc, blocksElement, player, Material.IRON_ORE, "Fer");
-            addBlockDetails(doc, blocksElement, player, Material.COAL_ORE, "Charbon");
-            addBlockDetails(doc, blocksElement, player, Material.EMERALD_ORE, "Émeraude");
-            addBlockDetails(doc, blocksElement, player, Material.LAPIS_ORE, "Lapis Lazuli");
-            addBlockDetails(doc, blocksElement, player, Material.REDSTONE_ORE, "Redstone");
+            for (Material material : Material.values()) {
+                int minedBlocks = player.getStatistic(Statistic.MINE_BLOCK, material);  // Renommé en `minedBlocks`
+                if (minedBlocks > 0) {
+                    Element blockElement = doc.createElement("minerai");
+                    blockElement.setAttribute("nom", material.toString());
+                    blockElement.appendChild(doc.createTextNode(String.valueOf(minedBlocks)));
+                    blocksElement.appendChild(blockElement);
+                }
+            }
 
             // Ajouter le total des blocs minés
             Element totalBlocksElement = doc.createElement("totalBlocsMines");
-            totalBlocksElement.appendChild(doc.createTextNode(String.valueOf(blocksMined)));
+            totalBlocksElement.appendChild(doc.createTextNode(String.valueOf(totalBlocksMined)));
             blocksElement.appendChild(totalBlocksElement);
 
             // Détails des mobs tués
             Element mobsElement = doc.createElement("mobsTues");
             rootElement.appendChild(mobsElement);
 
-            // Ajouter les détails de chaque monstre tué
-            addMobDetails(doc, mobsElement, player, EntityType.ENDERMAN, "Enderman");
-            addMobDetails(doc, mobsElement, player, EntityType.WITHER_SKELETON, "Wither Skeleton");
-            addMobDetails(doc, mobsElement, player, EntityType.BLAZE, "Blaze");
-            addMobDetails(doc, mobsElement, player, EntityType.CREEPER, "Creeper");
-            addMobDetails(doc, mobsElement, player, EntityType.GHAST, "Ghast");
-            addMobDetails(doc, mobsElement, player, EntityType.ZOMBIE, "Zombie");
-            addMobDetails(doc, mobsElement, player, EntityType.SKELETON, "Squelette");
+            for (EntityType entityType : EntityType.values()) {
+                if (entityType != EntityType.UNKNOWN) {
+                    int killedMobs = player.getStatistic(Statistic.KILL_ENTITY, entityType);
+                    if (killedMobs > 0) {
+                        Element mobElement = doc.createElement("monstre");
+                        mobElement.setAttribute("nom", entityType.toString());
+                        mobElement.appendChild(doc.createTextNode(String.valueOf(killedMobs)));
+                        mobsElement.appendChild(mobElement);
+                    }
+                }
+            }
 
             // Ajouter le total des mobs tués
             Element totalMobsElement = doc.createElement("totalMobsTues");
@@ -192,60 +202,17 @@ public final class StatCraft extends JavaPlugin implements Listener {
             Element craftElement = doc.createElement("objetsCraftes");
             rootElement.appendChild(craftElement);
 
-            // Ajouter les détails pour les outils/armes de chaque type et matériau
-            // Épées
-            addCraftDetails(doc, craftElement, player, Material.WOODEN_SWORD, "Épée en bois");
-            addCraftDetails(doc, craftElement, player, Material.STONE_SWORD, "Épée en pierre");
-            addCraftDetails(doc, craftElement, player, Material.IRON_SWORD, "Épée en fer");
-            addCraftDetails(doc, craftElement, player, Material.DIAMOND_SWORD, "Épée en diamant");
-            addCraftDetails(doc, craftElement, player, Material.NETHERITE_SWORD, "Épée en netherite");
+            for (Material material : Material.values()) {
+                int craftedItems = player.getStatistic(Statistic.CRAFT_ITEM, material);  // Renommé en `craftedItems`
+                if (craftedItems > 0) {
+                    Element craftItemElement = doc.createElement("objet");
+                    craftItemElement.setAttribute("nom", material.toString());
+                    craftItemElement.appendChild(doc.createTextNode(String.valueOf(craftedItems)));
+                    craftElement.appendChild(craftItemElement);
+                }
+            }
 
-            // Pioches
-            addCraftDetails(doc, craftElement, player, Material.WOODEN_PICKAXE, "Pioche en bois");
-            addCraftDetails(doc, craftElement, player, Material.STONE_PICKAXE, "Pioche en pierre");
-            addCraftDetails(doc, craftElement, player, Material.IRON_PICKAXE, "Pioche en fer");
-            addCraftDetails(doc, craftElement, player, Material.DIAMOND_PICKAXE, "Pioche en diamant");
-            addCraftDetails(doc, craftElement, player, Material.NETHERITE_PICKAXE, "Pioche en netherite");
-
-            // Haches
-            addCraftDetails(doc, craftElement, player, Material.WOODEN_AXE, "Hache en bois");
-            addCraftDetails(doc, craftElement, player, Material.STONE_AXE, "Hache en pierre");
-            addCraftDetails(doc, craftElement, player, Material.IRON_AXE, "Hache en fer");
-            addCraftDetails(doc, craftElement, player, Material.DIAMOND_AXE, "Hache en diamant");
-            addCraftDetails(doc, craftElement, player, Material.NETHERITE_AXE, "Hache en netherite");
-
-            // Pelles
-            addCraftDetails(doc, craftElement, player, Material.WOODEN_SHOVEL, "Pelle en bois");
-            addCraftDetails(doc, craftElement, player, Material.STONE_SHOVEL, "Pelle en pierre");
-            addCraftDetails(doc, craftElement, player, Material.IRON_SHOVEL, "Pelle en fer");
-            addCraftDetails(doc, craftElement, player, Material.DIAMOND_SHOVEL, "Pelle en diamant");
-            addCraftDetails(doc, craftElement, player, Material.NETHERITE_SHOVEL, "Pelle en netherite");
-
-            // Armures en cuir
-            addCraftDetails(doc, craftElement, player, Material.LEATHER_HELMET, "Casque en cuir");
-            addCraftDetails(doc, craftElement, player, Material.LEATHER_CHESTPLATE, "Plastron en cuir");
-            addCraftDetails(doc, craftElement, player, Material.LEATHER_LEGGINGS, "Jambières en cuir");
-            addCraftDetails(doc, craftElement, player, Material.LEATHER_BOOTS, "Bottes en cuir");
-
-            // Armures en fer
-            addCraftDetails(doc, craftElement, player, Material.IRON_HELMET, "Casque en fer");
-            addCraftDetails(doc, craftElement, player, Material.IRON_CHESTPLATE, "Plastron en fer");
-            addCraftDetails(doc, craftElement, player, Material.IRON_LEGGINGS, "Jambières en fer");
-            addCraftDetails(doc, craftElement, player, Material.IRON_BOOTS, "Bottes en fer");
-
-            // Armures en diamant
-            addCraftDetails(doc, craftElement, player, Material.DIAMOND_HELMET, "Casque en diamant");
-            addCraftDetails(doc, craftElement, player, Material.DIAMOND_CHESTPLATE, "Plastron en diamant");
-            addCraftDetails(doc, craftElement, player, Material.DIAMOND_LEGGINGS, "Jambières en diamant");
-            addCraftDetails(doc, craftElement, player, Material.DIAMOND_BOOTS, "Bottes en diamant");
-
-            // Armures en netherite
-            addCraftDetails(doc, craftElement, player, Material.NETHERITE_HELMET, "Casque en netherite");
-            addCraftDetails(doc, craftElement, player, Material.NETHERITE_CHESTPLATE, "Plastron en netherite");
-            addCraftDetails(doc, craftElement, player, Material.NETHERITE_LEGGINGS, "Jambières en netherite");
-            addCraftDetails(doc, craftElement, player, Material.NETHERITE_BOOTS, "Bottes en netherite");
-
-            // Ajouter le total des objets craftés (si tu veux également un total ici, tu peux le calculer)
+            // Ajouter le total des objets craftés
             int totalItemsCrafted = calculateTotalCraftedItems(player);
             Element totalCraftElement = doc.createElement("totalObjetsCraftes");
             totalCraftElement.appendChild(doc.createTextNode(String.valueOf(totalItemsCrafted)));
@@ -355,7 +322,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 int initialMobsKilled = initialStats.getOrDefault(player.getName() + "_mobs", 0);
                 int initialPlayTime = initialStats.getOrDefault(player.getName() + "_playTime", 0);
 
-                int blocksMinedDiff = (totalBlocksMined - initialBlocksMined) / 2;
+                int blocksMinedDiff = (totalBlocksMined - initialBlocksMined);
                 int mobsKilledDiff = totalMobsKilled - initialMobsKilled;
                 int playTimeDiff = playTimeMinutes - initialPlayTime;
 

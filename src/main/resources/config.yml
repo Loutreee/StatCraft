@@ -1,0 +1,151 @@
+blocks:
+  - name: "DIAMOND_ORE"
+    score: 10
+  - name: "DEEPSLATE_DIAMOND_ORE"
+    score: 10
+  - name: "ANCIENT_DEBRIS"
+    score: 15
+  - name: "GOLD_ORE"
+    score: 5
+  - name: "DEEPSLATE_GOLD_ORE"
+    score: 5
+  - name: "IRON_ORE"
+    score: 2
+  - name: "DEEPSLATE_IRON_ORE"
+    score: 2
+  - name: "COAL_ORE"
+    score: 1
+  - name: "DEEPSLATE_COAL_ORE"
+    score: 1
+  - name: "EMERALD_ORE"
+    score: 8
+  - name: "DEEPSLATE_EMERALD_ORE"
+    score: 8
+  - name: "LAPIS_ORE"
+    score: 3
+  - name: "DEEPSLATE_LAPIS_ORE"
+    score: 3
+  - name: "REDSTONE_ORE"
+    score: 2
+  - name: "DEEPSLATE_REDSTONE_ORE"
+    score: 2
+
+mobs:
+  - name: "ENDERMAN"
+    score: 10
+  - name: "WITHER_SKELETON"
+    score: 12
+  - name: "BLAZE"
+    score: 8
+  - name: "GHAST"
+    score: 7
+  - name: "CREEPER"
+    score: 5
+  - name: "ZOMBIE"
+    score: 3
+  - name: "SKELETON"
+    score: 3
+  - name: "PIGLIN_BRUTE"
+    score: 10
+  - name: "WITHER"
+    score: 50
+  - name: "ENDER_DRAGON"
+    score: 100
+  - name: "SPIDER"
+    score: 2
+  - name: "CAVE_SPIDER"
+    score: 2
+  - name: "PILLAGER"
+    score: 4
+  - name: "VINDICATOR"
+    score: 6
+  - name: "EVOKER"
+    score: 8
+  - name: "GUARDIAN"
+    score: 6
+  - name: "ELDER_GUARDIAN"
+    score: 15
+  - name: "PHANTOM"
+    score: 3
+  - name: "SHULKER"
+    score: 5
+  - name: "STRAY"
+    score: 4
+  - name: "HUSK"
+    score: 3
+  - name: "ZOMBIFIED_PIGLIN"
+    score: 3
+
+crafts:
+  - name: "WOODEN_SWORD"
+    score: 2
+  - name: "WOODEN_PICKAXE"
+    score: 2
+  - name: "WOODEN_AXE"
+    score: 2
+  - name: "WOODEN_SHOVEL"
+    score: 2
+  - name: "STONE_SWORD"
+    score: 4
+  - name: "STONE_PICKAXE"
+    score: 4
+  - name: "STONE_AXE"
+    score: 4
+  - name: "STONE_SHOVEL"
+    score: 4
+  - name: "IRON_SWORD"
+    score: 6
+  - name: "IRON_PICKAXE"
+    score: 6
+  - name: "IRON_AXE"
+    score: 6
+  - name: "IRON_SHOVEL"
+    score: 6
+  - name: "DIAMOND_SWORD"
+    score: 10
+  - name: "DIAMOND_PICKAXE"
+    score: 10
+  - name: "DIAMOND_AXE"
+    score: 10
+  - name: "DIAMOND_SHOVEL"
+    score: 10
+  - name: "NETHERITE_SWORD"
+    score: 15
+  - name: "NETHERITE_PICKAXE"
+    score: 15
+  - name: "NETHERITE_AXE"
+    score: 15
+  - name: "NETHERITE_SHOVEL"
+    score: 15
+  - name: "LEATHER_HELMET"
+    score: 3
+  - name: "LEATHER_CHESTPLATE"
+    score: 5
+  - name: "LEATHER_LEGGINGS"
+    score: 4
+  - name: "LEATHER_BOOTS"
+    score: 2
+  - name: "IRON_HELMET"
+    score: 6
+  - name: "IRON_CHESTPLATE"
+    score: 10
+  - name: "IRON_LEGGINGS"
+    score: 8
+  - name: "IRON_BOOTS"
+    score: 4
+  - name: "DIAMOND_HELMET"
+    score: 12
+  - name: "DIAMOND_CHESTPLATE"
+    score: 20
+  - name: "DIAMOND_LEGGINGS"
+    score: 16
+  - name: "DIAMOND_BOOTS"
+    score: 8
+  - name: "NETHERITE_HELMET"
+    score: 18
+  - name: "NETHERITE_CHESTPLATE"
+    score: 30
+  - name: "NETHERITE_LEGGINGS"
+    score: 24
+  - name: "NETHERITE_BOOTS"
+    score: 12
