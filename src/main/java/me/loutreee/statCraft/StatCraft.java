@@ -13,6 +13,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.World;
 
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -43,13 +44,19 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
         saveDefaultConfig();
 
-        ConfigLoader configLoader = new ConfigLoader();
+        // Vérifier si le monde est en mode Hardcore
+        World world = this.getServer().getWorlds().getFirst();
+        boolean isHardcoreMode = this.getServer().getWorlds().getFirst().isHardcore();
+        getLogger().info("Mode de jeu : " + (isHardcoreMode ? "Hardcore" : "Survival"));
+
+        // Charger la configuration
         File configFile = new File(getDataFolder(), "config.yml");
-        configLoader.loadConfig(configFile);
+        ConfigLoader configLoader = new ConfigLoader();
+        configLoader.loadConfig(configFile, isHardcoreMode);
 
         this.scoreCalculator = new Score(configLoader);
 
-        World world = this.getServer().getWorlds().getFirst(); // Récupère le premier monde (souvent le monde principal)
+        // Récupère le premier monde (souvent le monde principal)
         checkServerGameMode(world);
 
         sessionNumber = 0;
@@ -139,13 +146,17 @@ public final class StatCraft extends JavaPlugin implements Listener {
         return LocalDateTime.now(ZoneId.of("Europe/Paris")).format(formatter);
     }
 
-    public void writeStatistics(String playerName, int totalBlocksMined, int mobsKilled, int playTimeMinutes, int playerScore, Score scoreCalculator, Player player) {
+    public void writeStatistics(String playerName, int totalBlocksMined, int mobsKilled, int playTimeMinutes, int playerScore, Player player) {
         try {
             String timestamp = getCurrentTimestamp();
 
             File directory = new File("player_statistics/session" + sessionNumber + "/" + playerName);
             if (!directory.exists()) {
-                directory.mkdirs();
+                boolean dirCreated = directory.mkdirs();
+                if (!dirCreated) {
+                    getLogger().warning("Impossible de créer le répertoire : " + directory.getPath());
+                    // Gère l'erreur ici, comme lancer une exception ou utiliser un répertoire alternatif
+                }
             }
 
             // Création du document XML
@@ -193,7 +204,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 }
             }
 
-            // Ajouter le total des mobs tués
+            // Ajouter le total des mobs tué
             Element totalMobsElement = doc.createElement("totalMobsTues");
             totalMobsElement.appendChild(doc.createTextNode(String.valueOf(mobsKilled)));
             mobsElement.appendChild(totalMobsElement);
@@ -237,8 +248,13 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
             getLogger().info("Statistiques détaillées enregistrées pour " + playerName + " à " + timestamp);
         } catch (Exception e) {
-            e.printStackTrace();
+            getLogger().severe("Une erreur est survenue lors de l'enregistrement des statistiques pour " + playerName);
+            getLogger().severe(e.getMessage());
+            for (StackTraceElement element : e.getStackTrace()) {
+                getLogger().severe(element.toString());
+            }
         }
+
     }
 
     public int calculateTotalCraftedItems(Player player) {
@@ -265,45 +281,8 @@ public final class StatCraft extends JavaPlugin implements Listener {
         return totalCraftedItems;
     }
 
-
-    // Fonction pour ajouter des détails sur chaque bloc miné
-    private void addBlockDetails(Document doc, Element parentElement, Player player, Material material, String materialName) {
-        int blocksMined = player.getStatistic(Statistic.MINE_BLOCK, material);
-        if (blocksMined > 0) {
-            Element blockElement = doc.createElement("minerai");
-            blockElement.setAttribute("nom", materialName);
-            blockElement.appendChild(doc.createTextNode(String.valueOf(blocksMined)));
-            parentElement.appendChild(blockElement);
-        }
-    }
-
-    // Fonction pour ajouter des détails sur chaque monstre tué
-    private void addMobDetails(Document doc, Element parentElement, Player player, EntityType entityType, String entityName) {
-        int mobsKilled = player.getStatistic(Statistic.KILL_ENTITY, entityType);
-        if (mobsKilled > 0) {
-            Element mobElement = doc.createElement("monstre");
-            mobElement.setAttribute("nom", entityName);
-            mobElement.appendChild(doc.createTextNode(String.valueOf(mobsKilled)));
-            parentElement.appendChild(mobElement);
-        }
-    }
-
-    // Fonction pour ajouter des détails sur chaque objet crafté
-    private void addCraftDetails(Document doc, Element parentElement, Player player, Material material, String materialName) {
-        int itemsCrafted = player.getStatistic(Statistic.CRAFT_ITEM, material);
-        if (itemsCrafted > 0) {
-            Element craftElement = doc.createElement("objet");
-            craftElement.setAttribute("nom", materialName);
-            craftElement.appendChild(doc.createTextNode(String.valueOf(itemsCrafted)));
-            parentElement.appendChild(craftElement);
-        }
-    }
-
-
-    private final Map<String, Integer> lastStats = new HashMap<>();
-
     public void logPlayerStatistics() {
-        List<Player> players = (List<Player>) getServer().getOnlinePlayers();
+        List<Player> players = new ArrayList<>(getServer().getOnlinePlayers());
 
         if (players.isEmpty()) {
             getLogger().info("Aucun joueur n'est connecté.");
@@ -336,7 +315,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 getLogger().info(player.getName() + " a un score de " + playerScore + " points.");
 
                 // Enregistrer les nouvelles statistiques dans un fichier XML
-                writeStatistics(player.getName(), blocksMinedDiff, mobsKilledDiff, playTimeDiff, playerScore, scoreCalculator, player);
+                writeStatistics(player.getName(), blocksMinedDiff, mobsKilledDiff, playTimeDiff, playerScore, player);
             }
         }
     }
@@ -410,10 +389,6 @@ public final class StatCraft extends JavaPlugin implements Listener {
             initialStats.put(player.getName() + "_blocks", 0);
             initialStats.put(player.getName() + "_mobs", 0);
             initialStats.put(player.getName() + "_playTime", 0);
-
-            lastStats.put(player.getName() + "_blocks", 0);  // Réinitialiser aussi les dernières stats
-            lastStats.put(player.getName() + "_mobs", 0);
-            lastStats.put(player.getName() + "_playTime", 0);
 
             playerSessions.put(player.getName(), sessionNumber);  // Associer la session actuelle au joueur
             getLogger().info("Statistiques réinitialisées pour le joueur: " + player.getName() + " dans la session " + sessionNumber);
