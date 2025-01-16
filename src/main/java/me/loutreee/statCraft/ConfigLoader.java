@@ -26,15 +26,13 @@ public class ConfigLoader extends JavaPlugin {
 
 // Charger les blocs
         if (config.contains(mode + ".blocks")) {
-            getLogger().info("Section " + mode + ".blocks trouvée.");
             List<Map<?, ?>> blocksList = config.getMapList(mode + ".blocks");
             for (Map<?, ?> item : blocksList) {
                 String name = (String) item.get("name");
                 int score = (int) item.get("score");
                 blockScores.put(Material.valueOf(name), score);
+                getLogger().info("Score chargé pour le bloc " + name + " : " + score); // Log pour vérification
             }
-        } else {
-            getLogger().info("Section " + mode + ".blocks est introuvable dans la configuration !");
         }
 
 // Charger les mobs
@@ -77,4 +75,7 @@ public class ConfigLoader extends JavaPlugin {
         return craftScores.getOrDefault(material, 0);
     }
 
+    public Map<Material, Integer> getCraftScores() {
+        return craftScores;
+    }
 }

@@ -11,11 +11,12 @@ import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.Listener;
 import org.bukkit.World;
+import org.bukkit.event.block.BlockBreakEvent;
+import org.bukkit.event.entity.EntityDeathEvent;
+import org.bukkit.event.inventory.PrepareItemCraftEvent;
 
 import java.time.ZoneId;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.util.*;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.transform.Transformer;
@@ -27,14 +28,64 @@ import org.bukkit.scheduler.BukkitRunnable;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import java.io.File;
-import java.util.Map;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+
 
 public final class StatCraft extends JavaPlugin implements Listener {
 
     private File overworldToWatch;
     private Score scoreCalculator;
+    private final Map<UUID, Integer> playerScores = new HashMap<>();
+
+    @EventHandler
+    public void onBlockBreak(BlockBreakEvent event) {
+        Player player = event.getPlayer();
+        Material blockType = event.getBlock().getType();
+
+        getLogger().info("Bloc cassé : " + blockType); // Log pour voir si l'événement est capturé
+
+        int blockScore = scoreCalculator.getConfigLoader().getBlockScore(blockType);
+
+        if (blockScore > 0) {
+            int playerScore = playerScores.getOrDefault(player.getUniqueId(), 0);
+            playerScores.put(player.getUniqueId(), playerScore + blockScore);
+            player.sendMessage("Vous avez gagné " + blockScore + " points pour avoir miné " + blockType);
+        }
+    }
+
+    @EventHandler
+    public void onEntityDeath(EntityDeathEvent event) {
+        if (event.getEntity().getKiller() != null) {
+            Player player = event.getEntity().getKiller();
+            EntityType entityType = event.getEntityType();
+
+            int mobScore = scoreCalculator.getConfigLoader().getMobScore(entityType);
+
+            if (mobScore > 0) {
+                int playerScore = playerScores.getOrDefault(player.getUniqueId(), 0);
+                playerScores.put(player.getUniqueId(), playerScore + mobScore);
+                player.sendMessage("Vous avez gagné " + mobScore + " points pour avoir tué un " + entityType);
+            }
+        }
+    }
+
+    @EventHandler
+    public void onItemCraft(PrepareItemCraftEvent event) {
+        if (event.getView().getPlayer() instanceof Player) {
+            Player player = (Player) event.getView().getPlayer();
+            if (event.getInventory().getResult() != null) {
+                Material craftedItem = event.getInventory().getResult().getType();
+                int craftScore = scoreCalculator.getConfigLoader().getCraftScore(craftedItem);
+
+                if (craftScore > 0) {
+                    int playerScore = playerScores.getOrDefault(player.getUniqueId(), 0);
+                    playerScores.put(player.getUniqueId(), playerScore + craftScore);
+                    player.sendMessage("Vous avez gagné " + craftScore + " points pour avoir crafté un " + craftedItem);
+                }
+            }
+        }
+    }
 
     @Override
     public void onEnable() {
