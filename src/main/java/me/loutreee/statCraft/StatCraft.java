@@ -100,6 +100,9 @@ public final class StatCraft extends JavaPlugin implements Listener {
         boolean isHardcoreMode = this.getServer().getWorlds().getFirst().isHardcore();
         getLogger().info("Mode de jeu : " + (isHardcoreMode ? "Hardcore" : "Survival"));
 
+        // Créer le fichier XML indiquant le mode Hardcore
+        createServerModeFile(isHardcoreMode);
+
         // Charger la configuration
         File configFile = new File(getDataFolder(), "config.yml");
         ConfigLoader configLoader = new ConfigLoader();
@@ -124,6 +127,51 @@ public final class StatCraft extends JavaPlugin implements Listener {
             }
         }.runTaskTimer(this, 0L, 600L);
     }
+
+    public void createServerModeFile(boolean isHardcoreMode) {
+        try {
+            // Crée le répertoire si nécessaire
+            File directory = new File(getDataFolder(), "server_info");
+            if (!directory.exists()) {
+                boolean dirCreated = directory.mkdirs();
+                if (!dirCreated) {
+                    getLogger().warning("Impossible de créer le répertoire : " + directory.getPath());
+                    return;
+                }
+            }
+
+            // Crée le fichier XML
+            File file = new File(directory, "server_mode.xml");
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.newDocument();
+
+            // Racine du document
+            Element rootElement = doc.createElement("server");
+            doc.appendChild(rootElement);
+
+            // Ajoute l'élément "hardcoreMode"
+            Element hardcoreElement = doc.createElement("hardcoreMode");
+            hardcoreElement.appendChild(doc.createTextNode(String.valueOf(isHardcoreMode)));
+            rootElement.appendChild(hardcoreElement);
+
+            // Sauvegarde le fichier
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            DOMSource source = new DOMSource(doc);
+            StreamResult result = new StreamResult(file);
+            transformer.transform(source, result);
+
+            getLogger().info("Fichier server_mode.xml créé avec succès.");
+        } catch (Exception e) {
+            getLogger().severe("Une erreur est survenue lors de la création du fichier server_mode.xml.");
+            getLogger().severe(e.getMessage());
+            for (StackTraceElement element : e.getStackTrace()) {
+                getLogger().severe(element.toString());
+            }
+        }
+    }
+
 
     private class FolderCheckTask extends BukkitRunnable {
         @Override
