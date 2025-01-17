@@ -357,16 +357,20 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 int playTimeDiff = playTimeMinutes - initialPlayTime;
 
                 //Calcul le score
-                int playerScore = scoreCalculator.calculatePlayerScore(player, playTimeDiff);
+                int timeScore = scoreCalculator.calculatePlayerScore(player, playTimeDiff);
+
+                int eventScore = playerScores.getOrDefault(player.getUniqueId(), 0);
+
+                int totalScore = eventScore + timeScore;
 
                 // Afficher les écarts des statistiques par rapport aux valeurs initiales
                 getLogger().info(player.getName() + " a miné " + blocksMinedDiff + " blocs depuis le début de la session.");
                 getLogger().info(player.getName() + " a tué " + mobsKilledDiff + " monstres depuis le début de la session.");
                 getLogger().info(player.getName() + " a joué " + playTimeDiff + " minutes depuis le début de la session.");
-                getLogger().info(player.getName() + " a un score de " + playerScore + " points.");
+                getLogger().info(player.getName() + " a un score de " + totalScore + " points.");
 
                 // Enregistrer les nouvelles statistiques dans un fichier XML
-                writeStatistics(player.getName(), blocksMinedDiff, mobsKilledDiff, playTimeDiff, playerScore, player);
+                writeStatistics(player.getName(), blocksMinedDiff, mobsKilledDiff, playTimeDiff, totalScore, player);
             }
         }
     }
