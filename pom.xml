@@ -6,7 +6,7 @@
 
     <groupId>me.loutreee</groupId>
     <artifactId>statcraft</artifactId>
-    <version>3.0.1-BETA</version>
+    <version>4.0.0-BETA</version>
     <packaging>jar</packaging>
 
     <name>statcraft</name>

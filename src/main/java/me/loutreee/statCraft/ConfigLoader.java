@@ -61,6 +61,7 @@ public class ConfigLoader extends JavaPlugin {
             getLogger().info("Section " + mode + ".crafts est introuvable dans la configuration !");
         }
 
+
     }
 
     public int getBlockScore(Material material) {
@@ -75,7 +76,16 @@ public class ConfigLoader extends JavaPlugin {
         return craftScores.getOrDefault(material, 0);
     }
 
+    public Map<Material, Integer> getBlockScores() {
+        return blockScores;
+    }
+
+    public Map<EntityType, Integer> getMobScores() {
+        return mobScores;
+    }
+
     public Map<Material, Integer> getCraftScores() {
+
         return craftScores;
     }
 }

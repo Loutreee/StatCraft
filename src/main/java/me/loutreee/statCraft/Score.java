@@ -4,6 +4,7 @@ import org.bukkit.Material;
 import org.bukkit.Statistic;
 import org.bukkit.entity.EntityType;
 import org.bukkit.entity.Player;
+import java.util.Map;
 
 public class Score {
     private final ConfigLoader configLoader;
@@ -20,18 +21,33 @@ public class Score {
     public int calculatePlayerScore(Player player, int playTimeDiff) {
         int score = 0;
 
-        // Récupération des scores individuels
-        int blockScore = configLoader.getBlockScore(Material.STONE); // Exemple, ajoutez la logique pour tous les blocs
-        int mobScore = configLoader.getMobScore(EntityType.SHEEP); // Exemple, idem pour les mobs
-        int craftScore = configLoader.getCraftScore(Material.STONE_SWORD); // Exemple, idem pour les crafts
-
-        // Ajouter tous les scores
+        // Ajouter le score basé sur le temps de jeu
         score += playTimeDiff;
-        score += blockScore;
-        score += mobScore;
-        score += craftScore;
+
+        // Ajouter le score pour les blocs cassés
+        for (Map.Entry<Material, Integer> entry : configLoader.getBlockScores().entrySet()) {
+            Material block = entry.getKey();
+            int multiplier = entry.getValue();
+            int count = player.getStatistic(Statistic.MINE_BLOCK, block);
+            score += count * multiplier;
+        }
+
+        // Ajouter le score pour les mobs tués
+        for (Map.Entry<EntityType, Integer> entry : configLoader.getMobScores().entrySet()) {
+            EntityType mob = entry.getKey();
+            int multiplier = entry.getValue();
+            int count = player.getStatistic(Statistic.KILL_ENTITY, mob);
+            score += count * multiplier;
+        }
+
+        // Ajouter le score pour les objets craftés
+        for (Map.Entry<Material, Integer> entry : configLoader.getCraftScores().entrySet()) {
+            Material item = entry.getKey();
+            int multiplier = entry.getValue();
+            int count = player.getStatistic(Statistic.CRAFT_ITEM, item);
+            score += count * multiplier;
+        }
 
         return score;
     }
-
 }
