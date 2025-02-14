@@ -32,7 +32,7 @@ public class Score {
             score += count * multiplier;
         }
 
-        // Ajouter le score pour les mobs tués
+        // Ajouter le score pour les mobs tué
         for (Map.Entry<EntityType, Integer> entry : configLoader.getMobScores().entrySet()) {
             EntityType mob = entry.getKey();
             int multiplier = entry.getValue();

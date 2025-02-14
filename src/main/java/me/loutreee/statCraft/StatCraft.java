@@ -42,8 +42,20 @@ public final class StatCraft extends JavaPlugin implements Listener {
     private final Map<String, Integer> initialStats = new HashMap<>();
     private final Map<String, Integer> playerSessions = new HashMap<>();
 
+    private Web webServer;
+
     @Override
     public void onEnable() {
+
+        // Démarrage du serveur Javalin
+        webServer = new Web();
+        webServer.start();
+
+        // Enregistrement des listeners et démarrage du plugin
+        this.getServer().getPluginManager().registerEvents(this, this);
+        getLogger().info("[StatCraft] Le plugin est activé !");
+        saveDefaultConfig();
+
         // Enregistrement des listeners et démarrage du plugin
         this.getServer().getPluginManager().registerEvents(this, this);
         getLogger().info("[StatCraft] Le plugin est activé !");
@@ -83,6 +95,9 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
     @Override
     public void onDisable() {
+        if (webServer != null) {
+            webServer.stop();
+        }
         getLogger().info("[StatCraft] Le plugin est désactivé !");
     }
 
@@ -168,8 +183,6 @@ public final class StatCraft extends JavaPlugin implements Listener {
             resetAllPlayersStatsInMemory();
         }
     }
-
-    // ----------------- MÉTHODES D'AIDE -----------------
 
     public void createServerModeFile(boolean isHardcoreMode) {
         try {
