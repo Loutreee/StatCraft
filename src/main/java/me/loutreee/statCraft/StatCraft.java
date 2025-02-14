@@ -38,7 +38,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
     private final Map<UUID, Integer> playerScores = new HashMap<>();
 
     private int sessionNumber = 0;
-    // On enregistre ici les statistiques initiales de chaque joueur (blocs, mobs et crafts)
+    // On enregistre ici les statistiques initiales de chaque joueur (blocs, mobs et crafts).
     private final Map<String, Integer> initialStats = new HashMap<>();
     private final Map<String, Integer> playerSessions = new HashMap<>();
 
@@ -50,7 +50,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
         saveDefaultConfig();
 
         // Détermine le mode de jeu (Hardcore ou Survival) à partir du premier monde
-        World world = this.getServer().getWorlds().get(0);
+        World world = this.getServer().getWorlds().getFirst();
         boolean isHardcoreMode = world.isHardcore();
         getLogger().info("[StatCraft] Mode de jeu : " + (isHardcoreMode ? "Hardcore" : "Survival"));
 
@@ -120,8 +120,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
     // Lorsqu'un joueur craft un objet, on logge immédiatement l'action avec la valeur en points
     @EventHandler
     public void onItemCraft(PrepareItemCraftEvent event) {
-        if (event.getView().getPlayer() instanceof Player) {
-            Player player = (Player) event.getView().getPlayer();
+        if (event.getView().getPlayer() instanceof Player player) {
             if (event.getInventory().getResult() != null) {
                 Material craftedItem = event.getInventory().getResult().getType();
                 int craftScore = scoreCalculator.getConfigLoader().getCraftScore(craftedItem);
@@ -153,14 +152,14 @@ public final class StatCraft extends JavaPlugin implements Listener {
     // Lors du chargement d'un nouveau monde, on réinitialise les statistiques en mémoire
     @EventHandler
     public void onWorldLoad(WorldLoadEvent event) {
-        World world = this.getServer().getWorlds().get(0);
+        World world = this.getServer().getWorlds().getFirst();
         if (world.getName().equals("world")) {
             resetAllPlayersStatsInMemory();
             getLogger().info("[StatCraft] Nouveau monde chargé. Statistiques réinitialisées.");
         }
     }
 
-    // Lors de la mort d'un joueur en mode Hardcore, on incrémente le numéro de session et on réinitialise les stats
+    // Lors de la mort d'un joueur en mode Hardcore, on incrémente le numéro de session et on réinitialise les stats.
     @EventHandler
     public void onPlayerDeath(PlayerDeathEvent event) {
         World world = event.getEntity().getWorld();
@@ -201,7 +200,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
             getLogger().info("[StatCraft] Fichier server_mode.xml créé avec succès.");
         } catch (Exception e) {
             getLogger().severe("[StatCraft] Erreur lors de la création du fichier server_mode.xml.");
-            e.printStackTrace();
+            getLogger().log(java.util.logging.Level.SEVERE, "Stack trace :", e);
         }
     }
 
@@ -233,13 +232,13 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
     /**
      * Méthode d'écriture des statistiques détaillées dans un fichier XML.
-     * Pour chaque catégorie, on inscrit :
-     * - Les entrées détaillées (exemple : pour chaque bloc miné, mob tué ou objet crafté)
-     * - Une balise <score> indiquant le score pondéré (nombre * coefficient config)
+     * Pour chaque catégorie, on inscrit
+     * - Les entrées détaillées (exemple : pour chaque bloc miné, mob tué ou objet craft).
+     * - Une balise <score> indiquant le score pondéré (nombre * coefficient config).
      * - Une balise <total…> indiquant le nombre total d'actions
      * Le score global est la somme des scores pondérés, auquel s'ajoute le temps de jeu (1 point/minute).
      */
-    public void writeStatistics(String playerName, int blocksDiff, int mobsDiff, int playTimeMinutes, int playerScore, Player player) {
+    public void writeStatistics(String playerName, int playTimeMinutes, Player player) {
         try {
             String timestamp = getCurrentTimestamp();
             File directory = new File("player_statistics/session" + sessionNumber + "/" + playerName);
@@ -366,7 +365,9 @@ public final class StatCraft extends JavaPlugin implements Listener {
             getLogger().info("[StatCraft] Statistiques détaillées enregistrées pour " + playerName + " à " + timestamp);
         } catch (Exception e) {
             getLogger().severe("[StatCraft] Erreur lors de l'enregistrement des statistiques pour " + playerName);
-            e.printStackTrace();
+
+            // Au lieu de printStackTrace(), on log l’exception avec son stacktrace
+            getLogger().log(java.util.logging.Level.SEVERE, "Stack trace :", e);
         }
     }
 
@@ -413,7 +414,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                         int val = player.getStatistic(Statistic.MINE_BLOCK, mat);
                         totalBlocks += val;
                         weightedBlocks += val * scoreCalculator.getConfigLoader().getBlockScore(mat);
-                    } catch (IllegalArgumentException e) { }
+                    } catch (IllegalArgumentException ignored) { }
                 }
                 int totalMobs = 0;
                 int weightedMobs = 0;
@@ -424,7 +425,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                         int val = player.getStatistic(Statistic.KILL_ENTITY, et);
                         totalMobs += val;
                         weightedMobs += val * scoreCalculator.getConfigLoader().getMobScore(et);
-                    } catch (IllegalArgumentException e) { }
+                    } catch (IllegalArgumentException ignored) { }
                 }
                 int totalCrafts = 0;
                 int weightedCrafts = 0;
@@ -435,7 +436,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                         int val = player.getStatistic(Statistic.CRAFT_ITEM, mat);
                         totalCrafts += val;
                         weightedCrafts += val * scoreCalculator.getConfigLoader().getCraftScore(mat);
-                    } catch (IllegalArgumentException e) { }
+                    } catch (IllegalArgumentException ignored) { }
                 }
                 int playTimeTicks = player.getStatistic(Statistic.PLAY_ONE_MINUTE);
                 int playTimeMinutes = playTimeTicks / 1200;
@@ -457,7 +458,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 getLogger().info("[StatCraft] " + playerName + " - Score global: " + globalScore + " points");
 
                 // Enregistrement des statistiques détaillées dans le XML
-                writeStatistics(playerName, diffBlocks, diffMobs, playTimeMinutes, globalScore, player);
+                writeStatistics(playerName, diffBlocks, player);
             }
         }
     }
@@ -470,24 +471,24 @@ public final class StatCraft extends JavaPlugin implements Listener {
                     for (Material mat : Material.values()) {
                         try {
                             player.setStatistic(Statistic.MINE_BLOCK, mat, 0);
-                        } catch (IllegalArgumentException e) { }
+                        } catch (IllegalArgumentException ignored) { }
                     }
                 } else if (stat == Statistic.KILL_ENTITY) {
                     for (EntityType et : EntityType.values()) {
                         try {
                             player.setStatistic(Statistic.KILL_ENTITY, et, 0);
-                        } catch (IllegalArgumentException e) { }
+                        } catch (IllegalArgumentException ignored) { }
                     }
                 } else if (stat == Statistic.CRAFT_ITEM) {
                     for (Material mat : Material.values()) {
                         try {
                             player.setStatistic(Statistic.CRAFT_ITEM, mat, 0);
-                        } catch (IllegalArgumentException e) { }
+                        } catch (IllegalArgumentException ignored) { }
                     }
                 } else {
                     try {
                         player.setStatistic(stat, 0);
-                    } catch (IllegalArgumentException e) { }
+                    } catch (IllegalArgumentException ignored) { }
                 }
             }
             initialStats.put(player.getName() + "_blocks", 0);
