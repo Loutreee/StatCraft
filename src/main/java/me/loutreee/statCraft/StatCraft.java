@@ -466,7 +466,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 getLogger().info(playerName + " - Score global: " + globalScore + " points");
 
                 // Enregistrement des statistiques détaillées dans le XML
-                writeStatistics(playerName, diffBlocks, player);
+                writeStatistics(playerName, playTimeMinutes, player);
             }
         }
     }
