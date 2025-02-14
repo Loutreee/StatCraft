@@ -53,18 +53,13 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
         // Enregistrement des listeners et démarrage du plugin
         this.getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info("[StatCraft] Le plugin est activé !");
-        saveDefaultConfig();
-
-        // Enregistrement des listeners et démarrage du plugin
-        this.getServer().getPluginManager().registerEvents(this, this);
-        getLogger().info("[StatCraft] Le plugin est activé !");
+        getLogger().info(" Le plugin est activé !");
         saveDefaultConfig();
 
         // Détermine le mode de jeu (Hardcore ou Survival) à partir du premier monde
         World world = this.getServer().getWorlds().getFirst();
         boolean isHardcoreMode = world.isHardcore();
-        getLogger().info("[StatCraft] Mode de jeu : " + (isHardcoreMode ? "Hardcore" : "Survival"));
+        getLogger().info(" Mode de jeu : " + (isHardcoreMode ? "Hardcore" : "Survival"));
 
         // Création du fichier XML indiquant le mode du serveur
         createServerModeFile(isHardcoreMode);
@@ -98,7 +93,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
         if (webServer != null) {
             webServer.stop();
         }
-        getLogger().info("[StatCraft] Le plugin est désactivé !");
+        getLogger().info(" Le plugin est désactivé !");
     }
 
     // ----------------- ÉVÉNEMENTS -----------------
@@ -113,7 +108,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
         if (blockScore > 0) {
             int currentScore = playerScores.getOrDefault(player.getUniqueId(), 0);
             playerScores.put(player.getUniqueId(), currentScore + blockScore);
-            getLogger().info("[StatCraft] " + player.getName() + " broke block " + blockType + " awarding " + blockScore + " points.");
+            getLogger().info(player.getName() + " broke block " + blockType + " awarding " + blockScore + " points.");
         }
     }
 
@@ -127,7 +122,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
             if (mobScore > 0) {
                 int currentScore = playerScores.getOrDefault(player.getUniqueId(), 0);
                 playerScores.put(player.getUniqueId(), currentScore + mobScore);
-                getLogger().info("[StatCraft] " + player.getName() + " killed " + entityType + " awarding " + mobScore + " points.");
+                getLogger().info(player.getName() + " killed " + entityType + " awarding " + mobScore + " points.");
             }
         }
     }
@@ -142,7 +137,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 if (craftScore > 0) {
                     int currentScore = playerScores.getOrDefault(player.getUniqueId(), 0);
                     playerScores.put(player.getUniqueId(), currentScore + craftScore);
-                    getLogger().info("[StatCraft] " + player.getName() + " crafted " + craftedItem + " awarding " + craftScore + " points.");
+                    getLogger().info(player.getName() + " crafted " + craftedItem + " awarding " + craftScore + " points.");
                 }
             }
         }
@@ -160,7 +155,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
             // Enregistre aussi les statistiques de crafting
             initialStats.put(player.getName() + "_craft", getTotalStatistic(player, Statistic.CRAFT_ITEM, Material.class));
             playerSessions.put(player.getName(), currentSession);
-            getLogger().info("[StatCraft] Statistiques initiales enregistrées pour " + player.getName());
+            getLogger().info(" Statistiques initiales enregistrées pour " + player.getName());
         }
     }
 
@@ -170,7 +165,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
         World world = this.getServer().getWorlds().getFirst();
         if (world.getName().equals("world")) {
             resetAllPlayersStatsInMemory();
-            getLogger().info("[StatCraft] Nouveau monde chargé. Statistiques réinitialisées.");
+            getLogger().info(" Nouveau monde chargé. Statistiques réinitialisées.");
         }
     }
 
@@ -188,7 +183,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
         try {
             File directory = new File(getDataFolder(), "server_info");
             if (!directory.exists() && !directory.mkdirs()) {
-                getLogger().warning("[StatCraft] Impossible de créer le répertoire : " + directory.getPath());
+                getLogger().warning(" Impossible de créer le répertoire : " + directory.getPath());
                 return;
             }
 
@@ -210,9 +205,9 @@ public final class StatCraft extends JavaPlugin implements Listener {
             StreamResult result = new StreamResult(file);
             transformer.transform(source, result);
 
-            getLogger().info("[StatCraft] Fichier server_mode.xml créé avec succès.");
+            getLogger().info(" Fichier server_mode.xml créé avec succès.");
         } catch (Exception e) {
-            getLogger().severe("[StatCraft] Erreur lors de la création du fichier server_mode.xml.");
+            getLogger().severe(" Erreur lors de la création du fichier server_mode.xml.");
             getLogger().log(java.util.logging.Level.SEVERE, "Stack trace :", e);
         }
     }
@@ -222,7 +217,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
         @Override
         public void run() {
             if (!overworldToWatch.exists()) {
-                getLogger().info("[StatCraft] Le dossier 'overworld' a été supprimé !");
+                getLogger().info(" Le dossier 'overworld' a été supprimé !");
                 resetAllPlayersStatsInMemory();
                 cancel();
             }
@@ -231,9 +226,9 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
     public void checkServerGameMode(World world) {
         if (world.isHardcore()) {
-            getLogger().info("[StatCraft] Le monde principal est en mode HARDCORE !");
+            getLogger().info(" Le monde principal est en mode HARDCORE !");
         } else {
-            getLogger().info("[StatCraft] Le monde principal n'est pas en mode HARDCORE.");
+            getLogger().info(" Le monde principal n'est pas en mode HARDCORE.");
         }
     }
 
@@ -256,7 +251,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
             String timestamp = getCurrentTimestamp();
             File directory = new File("player_statistics/session" + sessionNumber + "/" + playerName);
             if (!directory.exists() && !directory.mkdirs()) {
-                getLogger().warning("[StatCraft] Impossible de créer le répertoire : " + directory.getPath());
+                getLogger().warning(" Impossible de créer le répertoire : " + directory.getPath());
             }
 
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
@@ -375,9 +370,9 @@ public final class StatCraft extends JavaPlugin implements Listener {
             StreamResult result = new StreamResult(new File(directory, timestamp + ".xml"));
             transformer.transform(source, result);
 
-            getLogger().info("[StatCraft] Statistiques détaillées enregistrées pour " + playerName + " à " + timestamp);
+            getLogger().info(" Statistiques détaillées enregistrées pour " + playerName + " à " + timestamp);
         } catch (Exception e) {
-            getLogger().severe("[StatCraft] Erreur lors de l'enregistrement des statistiques pour " + playerName);
+            getLogger().severe(" Erreur lors de l'enregistrement des statistiques pour " + playerName);
 
             // Au lieu de printStackTrace(), on log l’exception avec son stacktrace
             getLogger().log(java.util.logging.Level.SEVERE, "Stack trace :", e);
@@ -411,11 +406,11 @@ public final class StatCraft extends JavaPlugin implements Listener {
     public void logPlayerStatistics() {
         List<Player> players = new ArrayList<>(getServer().getOnlinePlayers());
         if (players.isEmpty()) {
-            getLogger().info("[StatCraft] Aucun joueur n'est connecté.");
+            getLogger().info(" Aucun joueur n'est connecté.");
         } else {
             for (Player player : players) {
                 String playerName = player.getName();
-                getLogger().info("[StatCraft] Statistiques du joueur: " + playerName);
+                getLogger().info(" Statistiques du joueur: " + playerName);
 
                 // Calcul des totaux depuis le début de la session (en filtrant les matériaux legacy)
                 int totalBlocks = 0;
@@ -464,11 +459,11 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
                 int globalScore = weightedBlocks + weightedMobs + weightedCrafts + playTimeMinutes;
 
-                getLogger().info("[StatCraft] " + playerName + " - Blocs minés: " + diffBlocks + " (Score: " + weightedBlocks + ")");
-                getLogger().info("[StatCraft] " + playerName + " - Mobs tués: " + diffMobs + " (Score: " + weightedMobs + ")");
-                getLogger().info("[StatCraft] " + playerName + " - Objets craftés: " + diffCrafts + " (Score: " + weightedCrafts + ")");
-                getLogger().info("[StatCraft] " + playerName + " - Temps de jeu: " + playTimeMinutes + " minutes");
-                getLogger().info("[StatCraft] " + playerName + " - Score global: " + globalScore + " points");
+                getLogger().info(playerName + " - Blocs minés: " + diffBlocks + " (Score: " + weightedBlocks + ")");
+                getLogger().info(playerName + " - Mobs tués: " + diffMobs + " (Score: " + weightedMobs + ")");
+                getLogger().info(playerName + " - Objets craftés: " + diffCrafts + " (Score: " + weightedCrafts + ")");
+                getLogger().info(playerName + " - Temps de jeu: " + playTimeMinutes + " minutes");
+                getLogger().info(playerName + " - Score global: " + globalScore + " points");
 
                 // Enregistrement des statistiques détaillées dans le XML
                 writeStatistics(playerName, diffBlocks, player);
@@ -509,7 +504,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
             initialStats.put(player.getName() + "_craft", 0);
             initialStats.put(player.getName() + "_playTime", 0);
             playerSessions.put(player.getName(), sessionNumber);
-            getLogger().info("[StatCraft] Statistiques réinitialisées pour " + player.getName() + " dans la session " + sessionNumber);
+            getLogger().info(" Statistiques réinitialisées pour " + player.getName() + " dans la session " + sessionNumber);
         }
     }
 }
