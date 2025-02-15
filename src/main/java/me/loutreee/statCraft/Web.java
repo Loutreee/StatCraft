@@ -6,6 +6,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.w3c.dom.Document;
 import java.io.File;
 import java.util.Arrays;
+import java.util.Comparator;
 
 import static org.apache.logging.log4j.LogManager.getLogger;
 
@@ -32,21 +33,21 @@ public class Web {
                 return;
             }
             // Trier les sessions par nom pour une lecture cohérente
-            Arrays.sort(sessionDirs, (a, b) -> a.getName().compareTo(b.getName()));
+            Arrays.sort(sessionDirs, Comparator.comparing(File::getName));
             for (File sessionDir : sessionDirs) {
                 resultBuilder.append("Score total des joueurs").append("\n");
                 File[] playerDirs = sessionDir.listFiles(File::isDirectory);
                 if (playerDirs == null || playerDirs.length == 0) {
                     resultBuilder.append("  Aucun joueur trouvé\n");
                 } else {
-                    Arrays.sort(playerDirs, (a, b) -> a.getName().compareTo(b.getName()));
+                    Arrays.sort(playerDirs, Comparator.comparing(File::getName));
                     for (File playerDir : playerDirs) {
                         File[] xmlFiles = playerDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".xml"));
                         if (xmlFiles == null || xmlFiles.length == 0) {
                             resultBuilder.append("  ").append(playerDir.getName()).append(" : Aucune donnée XML trouvée\n");
                         } else {
                             // Trier les fichiers XML par nom et prendre le dernier (le plus récent)
-                            Arrays.sort(xmlFiles, (a, b) -> a.getName().compareTo(b.getName()));
+                            Arrays.sort(xmlFiles, Comparator.comparing(File::getName));
                             File lastXml = xmlFiles[xmlFiles.length - 1];
                             try {
                                 DocumentBuilderFactory dbf = DocumentBuilderFactory.newInstance();
