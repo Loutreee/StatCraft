@@ -48,8 +48,10 @@ public final class StatCraft extends JavaPlugin implements Listener {
     public void onEnable() {
 
         // Démarrage du serveur Javalin
+
+        int webPort = getConfig().getInt("Web.port",27800);
         webServer = new Web();
-        webServer.start();
+        webServer.start(webPort);
 
         // Enregistrement des listeners et démarrage du plugin
         this.getServer().getPluginManager().registerEvents(this, this);

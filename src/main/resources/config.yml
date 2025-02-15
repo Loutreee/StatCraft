@@ -1,3 +1,6 @@
+Web:
+  port: 27800
+
 Hardcore:
   blocks:
     - name: "DIAMOND_ORE"

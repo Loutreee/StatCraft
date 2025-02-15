@@ -14,7 +14,7 @@ public class Web {
     private Javalin app;
 
     // Méthode pour démarrer le serveur Javalin
-    public void start() {
+    public void start(int port) {
         app = Javalin.create(config -> {
             // Vous pouvez ajouter des configurations ici si nécessaire
         });
@@ -70,8 +70,8 @@ public class Web {
         });
 
         // Démarrer le serveur sur le port 7070
-        app.start(27800);
-        getLogger().info("[Web] Serveur Javalin démarré sur le port 27800");
+        app.start(port);
+        getLogger().info("[Web] Serveur Javalin démarré sur le port{}", port);
     }
 
     // Méthode pour arrêter proprement le serveur Javalin
