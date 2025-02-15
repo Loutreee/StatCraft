@@ -71,14 +71,14 @@ public class Web {
 
         // Démarrer le serveur sur le port 7070
         app.start(port);
-        getLogger().info("[Web] Serveur Javalin démarré sur le port{}", port);
+        getLogger().info("Serveur Javalin démarré sur le port : {}", port);
     }
 
     // Méthode pour arrêter proprement le serveur Javalin
     public void stop() {
         if (app != null) {
             app.stop();
-            getLogger().info("[Web] Serveur Javalin arrêté");
+            getLogger().info("Serveur Javalin arrêté");
         }
     }
 }
