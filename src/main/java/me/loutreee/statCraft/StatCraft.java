@@ -48,6 +48,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
     public void onEnable() {
 
         // Démarrage du serveur Javalin
+        saveDefaultConfig();
 
         int webPort = getConfig().getInt("Web.port",27800);
         webServer = new Web();
@@ -56,7 +57,6 @@ public final class StatCraft extends JavaPlugin implements Listener {
         // Enregistrement des listeners et démarrage du plugin
         this.getServer().getPluginManager().registerEvents(this, this);
         getLogger().info(" Le plugin est activé !");
-        saveDefaultConfig();
 
         // Détermine le mode de jeu (Hardcore ou Survival) à partir du premier monde
         World world = this.getServer().getWorlds().getFirst();

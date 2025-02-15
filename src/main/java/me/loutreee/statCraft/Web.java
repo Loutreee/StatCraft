@@ -1,52 +1,57 @@
 package me.loutreee.statCraft;
 
 import io.javalin.Javalin;
+import io.javalin.http.staticfiles.Location;
+import org.w3c.dom.Document;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import org.w3c.dom.Document;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Comparator;
 
-import static org.apache.logging.log4j.LogManager.getLogger;
-
 public class Web {
     private Javalin app;
 
-    // Méthode pour démarrer le serveur Javalin
     public void start(int port) {
         app = Javalin.create(config -> {
-            // Vous pouvez ajouter des configurations ici si nécessaire
+            // Sert les fichiers statiques depuis /web
+            config.staticFiles.add("/web", Location.CLASSPATH);
         });
-        // Nouvelle route pour afficher les scores des joueurs en texte
-        app.get("/", ctx -> {
+
+        // Route scoreboard (affichage texte)
+        app.get("/scores", ctx -> {
             StringBuilder resultBuilder = new StringBuilder();
             File dataFolder = new File("player_statistics");
-            // getLogger().info("Chemin absolu : {}", dataFolder.getAbsolutePath());
+            // System.out.println("Chemin absolu : " + dataFolder.getAbsolutePath());
+
             if (!dataFolder.exists() || !dataFolder.isDirectory()) {
-                ctx.result("Aucune donnée trouvée dans 'data/player_statistics'");
+                ctx.result("Aucune donnée trouvée dans 'player_statistics'");
                 return;
             }
             File[] sessionDirs = dataFolder.listFiles(File::isDirectory);
             if (sessionDirs == null || sessionDirs.length == 0) {
-                ctx.result("Aucune session trouvée dans 'data/player_statistics'");
+                ctx.result("Aucune session trouvée dans 'player_statistics'");
                 return;
             }
-            // Trier les sessions par nom pour une lecture cohérente
+
             Arrays.sort(sessionDirs, Comparator.comparing(File::getName));
             for (File sessionDir : sessionDirs) {
-                resultBuilder.append("Score total des joueurs").append("\n");
+                resultBuilder.append("Score total des joueurs (Session : ")
+                        .append(sessionDir.getName()).append(")\n");
                 File[] playerDirs = sessionDir.listFiles(File::isDirectory);
                 if (playerDirs == null || playerDirs.length == 0) {
                     resultBuilder.append("  Aucun joueur trouvé\n");
                 } else {
                     Arrays.sort(playerDirs, Comparator.comparing(File::getName));
                     for (File playerDir : playerDirs) {
-                        File[] xmlFiles = playerDir.listFiles((dir, name) -> name.toLowerCase().endsWith(".xml"));
+                        File[] xmlFiles = playerDir.listFiles(
+                                (dir, name) -> name.toLowerCase().endsWith(".xml")
+                        );
                         if (xmlFiles == null || xmlFiles.length == 0) {
-                            resultBuilder.append("  ").append(playerDir.getName()).append(" : Aucune donnée XML trouvée\n");
+                            resultBuilder.append("  ")
+                                    .append(playerDir.getName())
+                                    .append(" : Aucune donnée XML trouvée\n");
                         } else {
-                            // Trier les fichiers XML par nom et prendre le dernier (le plus récent)
                             Arrays.sort(xmlFiles, Comparator.comparing(File::getName));
                             File lastXml = xmlFiles[xmlFiles.length - 1];
                             try {
@@ -54,11 +59,17 @@ public class Web {
                                 DocumentBuilder db = dbf.newDocumentBuilder();
                                 Document doc = db.parse(lastXml);
                                 doc.getDocumentElement().normalize();
-                                String score = doc.getElementsByTagName("scoreTotal").item(0).getTextContent();
-                                resultBuilder.append("  ").append(playerDir.getName())
-                                        .append(" : ").append(score).append("\n");
+                                String score = doc.getElementsByTagName("scoreTotal")
+                                        .item(0)
+                                        .getTextContent();
+                                resultBuilder.append("  ")
+                                        .append(playerDir.getName())
+                                        .append(" : ")
+                                        .append(score)
+                                        .append("\n");
                             } catch (Exception e) {
-                                resultBuilder.append("  ").append(playerDir.getName())
+                                resultBuilder.append("  ")
+                                        .append(playerDir.getName())
                                         .append(" : Erreur lors du parsing XML\n");
                             }
                         }
@@ -69,16 +80,14 @@ public class Web {
             ctx.result(resultBuilder.toString());
         });
 
-        // Démarrer le serveur sur le port 7070
         app.start(port);
-        getLogger().info("Serveur Javalin démarré sur le port : {}", port);
+        System.out.println("[Web] Serveur Javalin démarré sur le port : " + port);
     }
 
-    // Méthode pour arrêter proprement le serveur Javalin
     public void stop() {
         if (app != null) {
             app.stop();
-            getLogger().info("Serveur Javalin arrêté");
+            System.out.println("[Web] Serveur Javalin arrêté");
         }
     }
 }
