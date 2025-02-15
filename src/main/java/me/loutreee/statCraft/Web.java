@@ -7,6 +7,8 @@ import org.w3c.dom.Document;
 import java.io.File;
 import java.util.Arrays;
 
+import static org.apache.logging.log4j.LogManager.getLogger;
+
 public class Web {
     private Javalin app;
 
@@ -19,7 +21,7 @@ public class Web {
         app.get("/", ctx -> {
             StringBuilder resultBuilder = new StringBuilder();
             File dataFolder = new File("player_statistics");
-            System.out.println("Chemin absolu : " + dataFolder.getAbsolutePath());
+            // getLogger().info("Chemin absolu : {}", dataFolder.getAbsolutePath());
             if (!dataFolder.exists() || !dataFolder.isDirectory()) {
                 ctx.result("Aucune donnée trouvée dans 'data/player_statistics'");
                 return;
@@ -68,14 +70,14 @@ public class Web {
 
         // Démarrer le serveur sur le port 7070
         app.start(27800);
-        System.out.println("[Web] Serveur Javalin démarré sur le port 27800");
+        getLogger().info("[Web] Serveur Javalin démarré sur le port 27800");
     }
 
     // Méthode pour arrêter proprement le serveur Javalin
     public void stop() {
         if (app != null) {
             app.stop();
-            System.out.println("[Web] Serveur Javalin arrêté");
+            getLogger().info("[Web] Serveur Javalin arrêté");
         }
     }
 }

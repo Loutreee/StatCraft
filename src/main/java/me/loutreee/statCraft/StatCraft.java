@@ -459,9 +459,9 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
                 int globalScore = weightedBlocks + weightedMobs + weightedCrafts + playTimeMinutes;
 
-                getLogger().info(playerName + " - Blocs minés: " + diffBlocks + " (Score: " + weightedBlocks + ")");
-                getLogger().info(playerName + " - Mobs tués: " + diffMobs + " (Score: " + weightedMobs + ")");
-                getLogger().info(playerName + " - Objets craftés: " + diffCrafts + " (Score: " + weightedCrafts + ")");
+                getLogger().info(playerName + " - Blocs minés: " + totalBlocks + " (Score: " + weightedBlocks + ")");
+                getLogger().info(playerName + " - Mobs tués: " + totalMobs + " (Score: " + weightedMobs + ")");
+                getLogger().info(playerName + " - Objets craftés: " + totalCrafts + " (Score: " + weightedCrafts + ")");
                 getLogger().info(playerName + " - Temps de jeu: " + playTimeMinutes + " minutes");
                 getLogger().info(playerName + " - Score global: " + globalScore + " points");
 

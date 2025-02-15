@@ -31,7 +31,6 @@ public class ConfigLoader extends JavaPlugin {
                 String name = (String) item.get("name");
                 int score = (int) item.get("score");
                 blockScores.put(Material.valueOf(name), score);
-                getLogger().info("Score chargé pour le bloc " + name + " : " + score); // Log pour vérification
             }
         }
 
