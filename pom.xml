@@ -124,6 +124,7 @@
             <artifactId>nitrite-mvstore-adapter</artifactId>
             <version>4.3.0</version>
         </dependency>
+
         <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>

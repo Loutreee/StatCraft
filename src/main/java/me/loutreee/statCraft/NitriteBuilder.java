@@ -1,19 +1,32 @@
 package me.loutreee.statCraft;
 
 import org.dizitart.no2.Nitrite;
-import org.dizitart.no2.collection.NitriteCollection;
+import org.dizitart.no2.repository.ObjectRepository;
 import org.dizitart.no2.mvstore.MVStoreModule;
 
 public class NitriteBuilder {
-    MVStoreModule storeModule = MVStoreModule.withConfig()
-            .filePath("/player_statistic/stattest.db")
-            .build();
+    private static Nitrite db;
+    private static ObjectRepository<PlayerData> playerRepository;
 
-    Nitrite db = Nitrite.builder()
-            .loadModule(storeModule)
-            //.loadModule(new JacksonMapperModule())
-            .openOrCreate();
+    static {
+        MVStoreModule storeModule = MVStoreModule.withConfig()
+                .filePath("player_statistic.db")
+                .build();
 
-    NitriteCollection collection = db.getCollection("test");
-    ObjectRepository<Player> repository = db.getRepository(Player.class);
+        db = Nitrite.builder()
+                .loadModule(storeModule)
+                .openOrCreate();
+
+        playerRepository = db.getRepository(PlayerData.class);
+    }
+
+    public static ObjectRepository<PlayerData> getPlayerRepository() {
+        return playerRepository;
+    }
+
+    public static void close() {
+        if (db != null) {
+            db.close();
+        }
+    }
 }
