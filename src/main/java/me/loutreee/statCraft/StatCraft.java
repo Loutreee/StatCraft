@@ -49,7 +49,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
         // Démarrage du serveur Javalin
         saveDefaultConfig();
-
+        
         int webPort = getConfig().getInt("Web.port",27800);
         webServer = new Web();
         webServer.start(webPort);
