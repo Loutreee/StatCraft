@@ -1,21 +1,23 @@
 package me.loutreee.statCraft;
 
 import org.dizitart.no2.Nitrite;
-import org.dizitart.no2.repository.ObjectRepository;
 import org.dizitart.no2.mvstore.MVStoreModule;
+import org.dizitart.no2.repository.ObjectRepository;
 
 public class NitriteBuilder {
-    private static Nitrite db;
-    private static ObjectRepository<PlayerData> playerRepository;
+    private static final Nitrite db;
+    private static final ObjectRepository<PlayerData> playerRepository;
 
     static {
         MVStoreModule storeModule = MVStoreModule.withConfig()
-                .filePath("player_statistic.db")
+                .filePath("player_statistics/player_statistic.db")
                 .build();
 
+        // Chainer l'enregistrement du convertisseur avant d'ouvrir la base
         db = Nitrite.builder()
                 .loadModule(storeModule)
-                .openOrCreate();
+                .registerEntityConverter(new PlayerDataConverter())
+                .openOrCreate("user", "password");
 
         playerRepository = db.getRepository(PlayerData.class);
     }
