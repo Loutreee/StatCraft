@@ -26,6 +26,10 @@ public class NitriteBuilder {
         return playerRepository;
     }
 
+    public static Nitrite getDatabase() {
+        return db;
+    }
+
     public static void close() {
         if (db != null) {
             db.close();
