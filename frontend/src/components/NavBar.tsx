@@ -1,26 +1,21 @@
 import { useState } from "react";
-import { Players } from "./Players";
+import { useNavigate } from "react-router-dom";
 
 export function NavBar() {
     const [activeButton, setActiveButton] = useState("Home");
     const [isMenuOpen, setIsMenuOpen] = useState(false);
-    const [showPlayers, setShowPlayers] = useState(false);
+    const navigate = useNavigate();
 
-    const handleClick = (buttonName: string) => {
+    const handleClick = (buttonName: string, path: string) => {
         setActiveButton(buttonName);
-        if (buttonName === "Players") {
-            setShowPlayers(!showPlayers);
-        } else {
-            setShowPlayers(false);
-        }
+        navigate(path);
     };
 
     return (
-        <>
             <nav className="bg-green border-b-2 border-red">
                 <div className="flex flex-wrap items-center justify-between p-4">
                     <a href="#" className="flex items-center space-x-3">
-                        <img src="/logo.png" className="h-8" alt="Flowbite Logo" />
+                    <img src="/logo.png" className="h-8" alt="StatCraft Logo" />
                         <span className="self-center text-2xl font-semibold text-white-dark">
                             StatCraft
                         </span>
@@ -57,16 +52,21 @@ export function NavBar() {
                         id="navbar-default"
                     >
                         <ul className="font-medium flex flex-col p-4 md:p-0 mt-4 border rounded-lg md:flex-row md:space-x-8 md:mt-0 md:border-0">
-                            {["Home", "Setup", "Players", "Status"].map((button) => (
-                                <li key={button}>
+                        {[
+                            { name: "Home", path: "/" },
+                            { name: "Setup", path: "/setup" },
+                            { name: "Players", path: "/players" },
+                            { name: "Status", path: "/status" }
+                        ].map(({ name, path }) => (
+                                <li key={name}>
                                     <button
-                                        className={`block py-2 px-3 rounded-sm transition-colors duration-200 ${activeButton === button
+                                        className={`block py-2 px-3 rounded-sm transition-colors duration-200 ${activeButton === name
                                                 ? "text-black bg-green-light"
                                                 : "text-black hover:bg-green-light"
                                             }`}
-                                        onClick={() => handleClick(button)}
+                                        onClick={() => handleClick(name, path)}
                                     >
-                                        {button}
+                                        {name}
                                     </button>
                                 </li>
                             ))}
@@ -74,9 +74,5 @@ export function NavBar() {
                     </div>
                 </div>
             </nav>
-
-            {/* Section Players (Affichée uniquement si "Players" est sélectionné) */}
-            {showPlayers && <Players />}
-        </>
     );
 }
