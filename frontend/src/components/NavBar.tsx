@@ -9,18 +9,18 @@ export function NavBar() {
     };
 
     return (
-        <nav className="bg-green border-gray-200 text-blue-600 border-b-2 border-red">
-            <div className="max-w-screen-xl flex flex-wrap items-center justify-between mx-auto p-4">
-                <a href="#" className="flex items-center space-x-3 rtl:space-x-reverse">
+        <nav className="bg-green border-b-2 border-red">
+            <div className="flex flex-wrap items-center justify-between p-4">
+                <a href="#" className="flex items-center space-x-3">
                     <img src="/logo.png" className="h-8" alt="Flowbite Logo" />
-                    <span className="self-center text-2xl font-semibold whitespace-nowrap text-white-dark">
+                    <span className="self-center text-2xl font-semibold text-white-dark">
                         StatCraft
                     </span>
                 </a>
                 <button
                     data-collapse-toggle="navbar-default"
                     type="button"
-                    className="inline-flex items-center p-2 w-10 h-10 justify-center text-sm text-gray-500 rounded-lg md:hidden hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-gray-200"
+                    className="inline-flex items-center p-2 w-10 h-10 justify-center md:hidden"
                     aria-controls="navbar-default"
                     aria-expanded={isMenuOpen}
                     onClick={() => setIsMenuOpen(!isMenuOpen)}
@@ -44,12 +44,12 @@ export function NavBar() {
                 </button>
                 {/* Menu (visible sur desktop, toggle sur mobile) */}
                 <div
-                    className={`w-full md:flex md:w-auto transition-all duration-300 ease-in-out ${
+                    className={`w-full md:w-auto transition-all duration-300 ease-in-out ${
                         isMenuOpen ? "block" : "hidden"
                     }`}
                     id="navbar-default"
                 >
-                    <ul className="font-medium flex flex-col p-4 md:p-0 mt-4 border border-gray-100 rounded-lg bg-gray-50 md:flex-row md:space-x-8 rtl:space-x-reverse md:mt-0 md:border-0">
+                    <ul className="font-medium flex flex-col p-4 md:p-0 mt-4 border rounded-lg md:flex-row md:space-x-8 md:mt-0 md:border-0">
                         {["Home", "Setup", "Players", "Status"].map((button) => (
                             <li key={button}>
                                 <a
