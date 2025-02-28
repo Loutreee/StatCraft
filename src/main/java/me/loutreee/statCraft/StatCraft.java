@@ -14,11 +14,22 @@ import org.bukkit.event.entity.EntityDeathEvent;
 import org.bukkit.event.inventory.CraftItemEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.event.player.PlayerQuitEvent;
+import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scoreboard.Score;
 import org.dizitart.no2.collection.Document;
 import org.dizitart.no2.filters.FluentFilter;
 import org.dizitart.no2.repository.ObjectRepository;
+import org.bukkit.inventory.CraftingInventory;
+import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.Recipe;
+import org.bukkit.inventory.ShapedRecipe;
+import org.bukkit.inventory.ShapelessRecipe;
+import org.bukkit.Material;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.List;
 
 import java.util.List;
 import java.util.Map;
@@ -28,11 +39,18 @@ public final class StatCraft extends JavaPlugin implements Listener {
     private ObjectRepository<PlayerData> playerRepository;
     private Javalin app;
     private StatsManager statsManager;
+    private ConfigLoader configLoader;
+    private ScoreService scoreService;
 
     @Override
     public void onEnable() {
         // Initialisation du StatsManager pour conserver les stats en mémoire
         statsManager = new StatsManager();
+        configLoader = new ConfigLoader(this);
+        scoreService = new ScoreService(configLoader);
+
+        // Récupération du port
+        int port = configLoader.getWebPort();
 
         // Récupération du repository Nitrite pour PlayerData
         playerRepository = NitriteBuilder.getPlayerRepository();
@@ -45,7 +63,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 staticFileConfig.location = Location.CLASSPATH;
                 staticFileConfig.hostedPath = "/";
             });
-        }).start(27800);
+        }).start(port);
 
         // Instanciation du service et du contrôleur pour l'API REST
         PlayerService playerService = new PlayerService();
@@ -53,6 +71,8 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
         // Enregistrement du contrôleur pour afficher toutes les stats via /api/allstats
         new StatsSnapshotController(app);
+
+        new StatsQueryController(app);
 
         getLogger().info("API REST démarrée sur le port 27800");
         getLogger().info("Plugin StatCraft activé !");
@@ -62,7 +82,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
         new BukkitRunnable() {
             @Override
             public void run() {
-                logAllPlayers();
+                // logAllPlayers();
                 insertSnapshotsForAllPlayers();
             }
         }.runTaskTimer(this, 0L, 600L);
@@ -85,28 +105,57 @@ public final class StatCraft extends JavaPlugin implements Listener {
         Player player = event.getPlayer();
         Material blockType = event.getBlock().getType();
         statsManager.incrementBlockMined(player, blockType);
+
+        // Récupérer le PlayerStats du joueur
+        PlayerStats ps = statsManager.getPlayerStats(player.getUniqueId());
+        if (ps != null) {
+            int points = scoreService.getBlockScore(blockType);
+            ps.addBlockScore(points); // Incrémente blockScore ET totalScore
+        }
         getLogger().info(player.getName() + " a miné un bloc de " + blockType);
     }
 
     // Incrémente le compteur d'items craftés (événement sur craft validé)
     @EventHandler
     public void onCraftItem(CraftItemEvent event) {
-        if (event.getWhoClicked() instanceof Player player) {
-            if (event.getInventory().getResult() != null) {
-                Material craftedItem = event.getInventory().getResult().getType();
-                statsManager.incrementItemCrafted(player, craftedItem);
-                getLogger().info(player.getName() + " a crafté " + craftedItem);
-            }
+        if (!(event.getWhoClicked() instanceof Player player)) return;
+        if (event.getRecipe() == null) return;
+
+        Material craftedItem = event.getRecipe().getResult().getType();
+        int baseAmount = event.getRecipe().getResult().getAmount();
+
+        // Vérifie si c'est un shift-click
+        if (event.isShiftClick()) {
+            int maxRepeats = getMaxCraftableTimes(event);
+            int totalCrafted = baseAmount * maxRepeats;
+
+            statsManager.incrementItemCrafted(player, craftedItem, totalCrafted);
+            getLogger().info(player.getName() + " a crafté (shift-click) " + totalCrafted + " " + craftedItem + ".");
+        } else {
+            // Cas normal (un seul lot fabriqué)
+            statsManager.incrementItemCrafted(player, craftedItem, baseAmount);
+            getLogger().info(player.getName() + " a crafté " + baseAmount + " " + craftedItem + ".");
         }
     }
 
-    // Incrémente le compteur de mobs tués (si le tueur est un joueur)
+
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
         if (event.getEntity().getKiller() != null) {
             Player player = event.getEntity().getKiller();
             EntityType mobType = event.getEntityType();
+
+            // Incrémente le compteur de mobs tués en mémoire
             statsManager.incrementMobKilled(player, mobType);
+
+            // Récupère le PlayerStats pour ce joueur
+            PlayerStats ps = statsManager.getPlayerStats(player.getUniqueId());
+            if (ps != null) {
+                // Récupère le score défini dans la config pour ce mob
+                int points = scoreService.getMobScore(mobType);
+                ps.addMobScore(points);
+            }
+
             getLogger().info(player.getName() + " a tué " + mobType);
         }
     }
@@ -159,20 +208,25 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
     // Insère un snapshot pour un joueur spécifique
     public void insertSnapshotForPlayer(Player player) {
-        StatsSnapshotService snapshotService = new StatsSnapshotService();
+        PlayerStats ps = statsManager.getPlayerStats(player.getUniqueId());
+        if (ps == null) {
+            return; // Aucune stat en mémoire pour ce joueur
+        }
+
+        // Calcul du temps de jeu actuel (en minutes)
+        int playTimeNow = player.getStatistic(Statistic.PLAY_ONE_MINUTE) / 1200;
+        int diff = playTimeNow - ps.getLastPlayTime();
+        if (diff > 0) {
+            // +1 point par minute
+            ps.addTimeScore(diff); // Incrémente timeScore ET totalScore
+            ps.setLastPlayTime(playTimeNow);
+        }
+
         String playerId = player.getName();
         getLogger().info("Insertion snapshot pour " + playerId);
 
-        // Récupération des stats en mémoire pour le joueur
-        PlayerStats ps = statsManager.getPlayerStats(player.getUniqueId());
-        if (ps == null) {
-            getLogger().info(" - Aucune stat en mémoire pour " + playerId);
-            return;
-        }
-
         // Log des détails pour chaque catégorie
-
-        // Blocs minés
+        // --- Blocs minés ---
         Map<String, Integer> blocksMap = ps.getBlocksMined();
         if (!blocksMap.isEmpty()) {
             int totalBlocks = 0;
@@ -186,7 +240,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
             getLogger().info(" - Aucun bloc miné récupéré.");
         }
 
-        // Items craftés
+        // --- Items craftés ---
         Map<String, Integer> itemsMap = ps.getItemsCrafted();
         if (!itemsMap.isEmpty()) {
             int totalItems = 0;
@@ -200,7 +254,7 @@ public final class StatCraft extends JavaPlugin implements Listener {
             getLogger().info(" - Aucun item crafté récupéré.");
         }
 
-        // Mobs tués
+        // --- Mobs tués ---
         Map<String, Integer> mobsMap = ps.getMobsKilled();
         if (!mobsMap.isEmpty()) {
             int totalMobs = 0;
@@ -214,18 +268,98 @@ public final class StatCraft extends JavaPlugin implements Listener {
             getLogger().info(" - Aucun mob tué récupéré.");
         }
 
-        // Temps de jeu (en minutes)
-        int playTime = player.getStatistic(Statistic.PLAY_ONE_MINUTE) / 1200;
-        getLogger().info(" - Temps de jeu : " + playTime + " minutes.");
+        // Log du temps de jeu actuel
+        getLogger().info(" - Temps de jeu : " + playTimeNow + " minutes.");
 
-        // Insertion du snapshot dans la base Nitrite
+        // Insertion d'un seul snapshot dans la base Nitrite
+        StatsSnapshotService snapshotService = new StatsSnapshotService();
         snapshotService.insertPlayerSnapshot(
                 ps.getPlayerName(),
                 ps.getBlocksMined(),
                 ps.getItemsCrafted(),
                 ps.getMobsKilled(),
-                playTime
+                playTimeNow,
+                ps.getBlockScore(),
+                ps.getCraftScore(),
+                ps.getMobScore(),
+                ps.getTimeScore(),
+                ps.getTotalScore()
         );
+
+
         getLogger().info("Snapshot inséré pour " + playerId);
     }
+
+    private int getMaxCraftableTimes(CraftItemEvent event) {
+        Recipe recipe = event.getRecipe();
+        if (recipe == null) {
+            return 1;
+        }
+        CraftingInventory inv = event.getInventory();
+        ItemStack[] matrix = inv.getMatrix();
+        int maxCrafts = Integer.MAX_VALUE;
+
+        if (recipe instanceof ShapedRecipe) {
+            ShapedRecipe shaped = (ShapedRecipe) recipe;
+            String[] shape = shaped.getShape();
+            Map<Character, ItemStack> ingredientMap = shaped.getIngredientMap();
+            // Calculer la quantité requise pour chaque ingrédient (clé = caractère)
+            Map<Character, Integer> required = new HashMap<>();
+            for (String row : shape) {
+                for (char c : row.toCharArray()) {
+                    if (c != ' ') {
+                        required.merge(c, 1, Integer::sum);
+                    }
+                }
+            }
+            // Pour chaque ingrédient requis, compter combien on en a dans le matrix
+            for (Map.Entry<Character, Integer> entry : required.entrySet()) {
+                char key = entry.getKey();
+                int needed = entry.getValue();
+                ItemStack ingredient = ingredientMap.get(key);
+                if (ingredient == null) continue; // recette invalide ?
+                Material mat = ingredient.getType();
+                int available = 0;
+                for (ItemStack stack : matrix) {
+                    if (stack != null && stack.getType() == mat) {
+                        available += stack.getAmount();
+                    }
+                }
+                int craftsForThisIngredient = available / needed;
+                if (craftsForThisIngredient < maxCrafts) {
+                    maxCrafts = craftsForThisIngredient;
+                }
+            }
+        } else if (recipe instanceof ShapelessRecipe) {
+            ShapelessRecipe shapeless = (ShapelessRecipe) recipe;
+            List<ItemStack> ingredients = shapeless.getIngredientList();
+            // Compter la quantité requise pour chaque type d'ingrédient
+            Map<Material, Integer> required = new HashMap<>();
+            for (ItemStack ingredient : ingredients) {
+                if (ingredient != null) {
+                    required.merge(ingredient.getType(), 1, Integer::sum);
+                }
+            }
+            // Pour chaque ingrédient requis, compter le total dans le matrix
+            for (Map.Entry<Material, Integer> entry : required.entrySet()) {
+                Material mat = entry.getKey();
+                int needed = entry.getValue();
+                int available = 0;
+                for (ItemStack stack : matrix) {
+                    if (stack != null && stack.getType() == mat) {
+                        available += stack.getAmount();
+                    }
+                }
+                int craftsForThisIngredient = available / needed;
+                if (craftsForThisIngredient < maxCrafts) {
+                    maxCrafts = craftsForThisIngredient;
+                }
+            }
+        } else {
+            // Pour les autres types de recettes, renvoie 1 par défaut
+            return 1;
+        }
+        return (maxCrafts == Integer.MAX_VALUE || maxCrafts < 1) ? 1 : maxCrafts;
+    }
+
 }

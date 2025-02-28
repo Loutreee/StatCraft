@@ -1,5 +1,6 @@
 package me.loutreee.statCraft;
 
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.dizitart.no2.collection.Document;
 import org.dizitart.no2.filters.FluentFilter;
@@ -21,11 +22,13 @@ public class StatsManager {
         ps.incrementBlock(blockType);
     }
 
-    public void incrementItemCrafted(Player player, org.bukkit.Material itemType) {
+    public void incrementItemCrafted(Player player, Material itemType, int amount) {
         PlayerStats ps = statsMap.computeIfAbsent(player.getUniqueId(),
                 uuid -> new PlayerStats(player.getName()));
-        ps.incrementItem(itemType);
+        // Incrémente l'item de la quantité 'amount'
+        ps.getItemsCrafted().merge(itemType.toString(), amount, Integer::sum);
     }
+
 
     public void incrementMobKilled(Player player, org.bukkit.entity.EntityType mobType) {
         PlayerStats ps = statsMap.computeIfAbsent(player.getUniqueId(),
@@ -49,22 +52,44 @@ public class StatsManager {
         List<Document> snapshots = NitriteBuilder.getDatabase()
                 .getCollection("playerStatsSnapshots")
                 .find(FluentFilter.where("playerName").eq(playerName))
-                // Ici, on peut trier par timestamp décroissant (si vous stockez un format comparable)
                 .toList();
+
         if (!snapshots.isEmpty()) {
-            // Supposons que le premier document est le plus récent
-            Document lastSnapshot = snapshots.getFirst();
+            // Tri des snapshots par timestamp décroissant (supposant que le champ "timestamp" est une chaîne ISO)
+            snapshots.sort((d1, d2) -> d2.get("timestamp", String.class)
+                    .compareTo(d1.get("timestamp", String.class)));
+
+            // Récupère le snapshot le plus récent (index 0)
+            Document lastSnapshot = snapshots.get(0);
+
             // Récupération des maps stockées dans le snapshot
             Map<String, Integer> blocks = lastSnapshot.get("blocksMined", Map.class);
             Map<String, Integer> items = lastSnapshot.get("itemsCrafted", Map.class);
-            Map<String, Integer> mobs = lastSnapshot.get("mobsKilled", Map.class);
+            Map<String, Integer> mobs  = lastSnapshot.get("mobsKilled", Map.class);
+
+            // Récupération des sous-scores
+            Integer blockScore = lastSnapshot.get("blockScore", Integer.class);
+            Integer craftScore = lastSnapshot.get("craftScore", Integer.class);
+            Integer mobScore   = lastSnapshot.get("mobScore", Integer.class);
+            Integer timeScore  = lastSnapshot.get("timeScore", Integer.class);
+            Integer totalScore = lastSnapshot.get("totalScore", Integer.class);
+
             // Récupération du PlayerStats ou création s'il n'existe pas
-            PlayerStats ps = statsMap.computeIfAbsent(player.getUniqueId(), uuid -> new PlayerStats(player.getName()));
+            PlayerStats ps = statsMap.computeIfAbsent(player.getUniqueId(),
+                    uuid -> new PlayerStats(player.getName()));
             ps.setBlocksMined(blocks);
             ps.setItemsCrafted(items);
             ps.setMobsKilled(mobs);
-            // Log d'initialisation
+
+            ps.setBlockScore(blockScore != null ? blockScore : 0);
+            ps.setCraftScore(craftScore != null ? craftScore : 0);
+            ps.setMobScore(mobScore != null ? mobScore : 0);
+            ps.setTimeScore(timeScore != null ? timeScore : 0);
+            ps.setTotalScore(totalScore != null ? totalScore : 0);
+
             System.out.println("Initialisation des stats pour " + playerName + " à partir du dernier snapshot.");
         }
     }
+
 }
+
