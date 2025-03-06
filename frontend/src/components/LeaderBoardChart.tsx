@@ -1,4 +1,3 @@
-import globalscore from "../data/globalscore.json";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useState, useEffect } from "react";
 
@@ -11,13 +10,27 @@ export function LeaderboardChart() {
     const [data, setData] = useState<PlayerData[]>([]);
 
     useEffect(() => {
-        // Transformer les données pour une courbe de progression
-        const formattedData = globalscore.map((player: any) => ({
-            timestamp: new Date(player.timestamp).toLocaleTimeString(), // Formater l'heure
-            totalScore: player.totalScore
-        }));
+        const fetchData = async () => {
+            try {
+                const response = await fetch("/api/stats/loutreee/latest");
+                if (!response.ok) {
+                    throw new Error("Failed to fetch data");
+                }
+                const result = await response.json();
 
-        setData(formattedData);
+                // Transformer les données pour une courbe de progression
+                const formattedData = result.map((player: any) => ({
+                    timestamp: new Date(player.timestamp).toLocaleTimeString(), // Formater l'heure
+                    totalScore: player.totalScore
+                }));
+
+                setData(formattedData);
+            } catch (error) {
+                console.error("Error fetching data:", error);
+            }
+        };
+
+        fetchData();
     }, []);
 
     return (
