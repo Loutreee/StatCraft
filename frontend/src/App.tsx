@@ -1,5 +1,5 @@
-import './App.css'
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import "./App.css"
+import { Routes, Route } from "react-router-dom";
 import { PlayersList } from './components/Players';
 import { PlayerStats } from './components/PlayerStats';
 import { Setup } from './components/Setup';
