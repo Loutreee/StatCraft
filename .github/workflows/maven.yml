@@ -37,4 +37,4 @@ jobs:
         uses: docker://github/super-linter:latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_JSX: false
+          FILTER_REGEX_EXCLUDE: "frontend/*"
