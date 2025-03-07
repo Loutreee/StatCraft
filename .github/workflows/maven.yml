@@ -36,5 +36,6 @@ jobs:
       - name: Super-linter
         uses: docker://github/super-linter:latest
         env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           VALIDATE_JAVA: true
           VALIDATE_TSX: false
