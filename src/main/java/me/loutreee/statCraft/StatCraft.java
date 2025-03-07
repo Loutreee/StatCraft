@@ -106,16 +106,22 @@ public final class StatCraft extends JavaPlugin implements Listener {
     public void onBlockBreak(BlockBreakEvent event) {
         Player player = event.getPlayer();
         Material blockType = event.getBlock().getType();
+
+        // Incrémente le compteur de blocs minés en mémoire
         statsManager.incrementBlockMined(player, blockType);
 
-        // Récupérer le PlayerStats du joueur
+        // Récupère le PlayerStats du joueur
         PlayerStats ps = statsManager.getPlayerStats(player.getUniqueId());
         if (ps != null) {
             int points = scoreService.getBlockScore(blockType);
             ps.addBlockScore(points); // Incrémente blockScore ET totalScore
+            getLogger().info(player.getName() + " a miné un bloc de " + blockType
+                    + " et a gagné " + points + " points (Total Block Score: " + ps.getBlockScore() + ")");
+        } else {
+            getLogger().info(player.getName() + " a miné un bloc de " + blockType + " (PlayerStats non trouvé)");
         }
-        getLogger().info(player.getName() + " a miné un bloc de " + blockType);
     }
+
 
     // Incrémente le compteur d'items craftés (événement sur craft validé)
     @EventHandler
@@ -123,23 +129,35 @@ public final class StatCraft extends JavaPlugin implements Listener {
         if (!(event.getWhoClicked() instanceof Player player)) return;
         if (event.getRecipe() == null) return;
 
-        Material craftedItem = event.getRecipe().getResult().getType();
-        int baseAmount = event.getRecipe().getResult().getAmount();
+        // Récupère le résultat de la recette craftée
+        ItemStack result = event.getRecipe().getResult();
+        Material craftedItem = result.getType();
+        int baseAmount = result.getAmount();
 
-        // Vérifie si c'est un shift-click
+        // Récupère le PlayerStats du joueur
+        PlayerStats ps = statsManager.getPlayerStats(player.getUniqueId());
+        if (ps == null) return;
+
+        // Gestion du shift-click : si c'est un shift-click, on calcule le nombre total crafté
+        int totalCrafted;
         if (event.isShiftClick()) {
             int maxRepeats = getMaxCraftableTimes(event);
-            int totalCrafted = baseAmount * maxRepeats;
-
-            statsManager.incrementItemCrafted(player, craftedItem, totalCrafted);
-            getLogger().info(player.getName() + " a crafté (shift-click) " + totalCrafted + " " + craftedItem + ".");
+            totalCrafted = baseAmount * maxRepeats;
         } else {
-            // Cas normal (un seul lot fabriqué)
-            statsManager.incrementItemCrafted(player, craftedItem, baseAmount);
-            getLogger().info(player.getName() + " a crafté " + baseAmount + " " + craftedItem + ".");
+            totalCrafted = baseAmount;
         }
-    }
 
+        // Incrémente le compteur en mémoire pour cet item, avec la quantité réelle craftée
+        statsManager.incrementItemCrafted(player, craftedItem, totalCrafted);
+
+        // Récupère le score configuré pour cet item depuis le config
+        int pointsPerUnit = scoreService.getCraftScore(craftedItem);
+        int totalPoints = pointsPerUnit * totalCrafted;
+        ps.addCraftScore(totalPoints); // ajoute au sous-score de craft (et totalScore)
+
+        getLogger().info(player.getName() + " a crafté " + totalCrafted + " " + craftedItem
+                + " pour " + totalPoints + " points (score unitaire: " + pointsPerUnit + ").");
+    }
 
     @EventHandler
     public void onEntityDeath(EntityDeathEvent event) {
@@ -156,11 +174,14 @@ public final class StatCraft extends JavaPlugin implements Listener {
                 // Récupère le score défini dans la config pour ce mob
                 int points = scoreService.getMobScore(mobType);
                 ps.addMobScore(points);
+                getLogger().info(player.getName() + " a tué " + mobType
+                        + " et a gagné " + points + " points (Total Mob Score: " + ps.getMobScore() + ")");
+            } else {
+                getLogger().info(player.getName() + " a tué " + mobType + " (PlayerStats non trouvé)");
             }
-
-            getLogger().info(player.getName() + " a tué " + mobType);
         }
     }
+
 
     // Lorsqu'un joueur se connecte, on vérifie s'il est déjà dans le repository et on initialise ses stats en mémoire
     @EventHandler
