@@ -76,6 +76,8 @@ public final class StatCraft extends JavaPlugin implements Listener {
 
         new ScoreController(app);
 
+        new TopPlayersController(app);
+
         getLogger().info("API REST démarrée sur le port 27800");
         getLogger().info("Plugin StatCraft activé !");
 

@@ -47,12 +47,14 @@ public class StatsManager extends JavaPlugin {
     public void initializePlayerStats(Player player) {
         String playerName = player.getName();
 
+        // Récupère tous les snapshots pour le joueur et crée une liste modifiable
         List<Document> snapshots = new ArrayList<>(NitriteBuilder.getDatabase()
                 .getCollection("playerStatsSnapshots")
                 .find(FluentFilter.where("playerName").eq(playerName))
                 .toList());
 
         if (!snapshots.isEmpty()) {
+            // Trie les snapshots par timestamp décroissant (le plus récent en premier)
             snapshots.sort((d1, d2) -> d2.get("timestamp", String.class)
                     .compareTo(d1.get("timestamp", String.class)));
 
@@ -63,18 +65,32 @@ public class StatsManager extends JavaPlugin {
             @SuppressWarnings("unchecked")
             Map<String, Integer> items = (Map<String, Integer>) lastSnapshot.get("itemsCrafted", Map.class);
             @SuppressWarnings("unchecked")
-            Map<String, Integer> mobs = (Map<String, Integer>) lastSnapshot.get("mobsKilled", Map.class);
+            Map<String, Integer> mobs  = (Map<String, Integer>) lastSnapshot.get("mobsKilled", Map.class);
 
             if (blocks == null) blocks = new HashMap<>();
             if (items == null) items = new HashMap<>();
             if (mobs == null) mobs = new HashMap<>();
 
-            // Récupération du PlayerStats
+            // Récupération (ou création) du PlayerStats en mémoire
             PlayerStats ps = statsMap.computeIfAbsent(player.getUniqueId(), uuid -> new PlayerStats(playerName));
             ps.setBlocksMined(blocks);
             ps.setItemsCrafted(items);
             ps.setMobsKilled(mobs);
 
+            // Restauration des sous-scores et du score total
+            Integer blockScore = lastSnapshot.get("blockScore", Integer.class);
+            Integer craftScore = lastSnapshot.get("craftScore", Integer.class);
+            Integer mobScore   = lastSnapshot.get("mobScore", Integer.class);
+            Integer timeScore  = lastSnapshot.get("timeScore", Integer.class);
+            Integer totalScore = lastSnapshot.get("totalScore", Integer.class);
+
+            ps.setBlockScore(blockScore != null ? blockScore : 0);
+            ps.setCraftScore(craftScore != null ? craftScore : 0);
+            ps.setMobScore(mobScore != null ? mobScore : 0);
+            ps.setTimeScore(timeScore != null ? timeScore : 0);
+            ps.setTotalScore(totalScore != null ? totalScore : 0);
+
+            getLogger().info("Initialisation des stats pour " + playerName + " à partir du dernier snapshot.");
         } else {
             getLogger().info("Aucun snapshot trouvé pour " + playerName + ". Stats non restaurées.");
         }
