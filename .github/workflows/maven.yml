@@ -37,5 +37,5 @@ jobs:
         uses: docker://github/super-linter:latest
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          VALIDATE_ALL_CODEBASE: false
+          VALIDATE_JSX: false
           VALIDATE_JAVA: true
