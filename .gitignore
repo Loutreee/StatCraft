@@ -1,5 +1,6 @@
 web/*
 dist/*
+dist/index.html
 
 # User-specific stuff
 .idea/
