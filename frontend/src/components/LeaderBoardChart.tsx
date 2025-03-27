@@ -96,8 +96,9 @@ export function LeaderboardChart() {
                         const isoString = entry.timestamp;
                         if (!mergedData[isoString]) {
                             mergedData[isoString] = {
+                                xPosition:0,
                                 isoString,
-                                label: new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Format sans les secondes
+                                label: new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                             };
                         }
                         mergedData[isoString][currentPlayer] = entry.totalScore;
@@ -185,38 +186,46 @@ export function LeaderboardChart() {
                         <XAxis dataKey="label" stroke="#000" />
                         <YAxis stroke="#000" domain={[yMin, yMax]} />
                         <Tooltip
-                            content={({ payload, label }) => {
-                                if (!payload || payload.length === 0) return null;
+    content={({ payload, label }) => {
+        if (!payload || payload.length === 0) return null;
 
-                                const referenceDate = new Date(payload[0]?.payload.isoString);
-                                const fullDateString = `${referenceDate.toISOString().split('T')[0]}T${label}`; 
+        // 'label' contient l'heure (par exemple '16:27:29')
+        // Utiliser le timestamp pour générer la date complète
+        const referenceDate = new Date(payload[0]?.payload.isoString);
+        const fullDateString = `${referenceDate.toISOString().split('T')[0]}T${label}`; 
 
-                                const date = new Date(fullDateString); 
-                                if (isNaN(date.getTime())) {
-                                    console.error("Date invalide:", label);
-                                    return null;
-                                }
-                                const formattedDate = date.toLocaleString('fr-FR', {
-                                    weekday: 'long',  
-                                    year: 'numeric',  
-                                    month: 'long',    
-                                    day: 'numeric',   
-                                    hour: '2-digit',  
-                                    minute: '2-digit'
-                                });
+        const date = new Date(fullDateString);
+        if (isNaN(date.getTime())) {
+            console.error("Date invalide:", label);
+            return null; // Si la date est invalide, ne rien afficher
+        }
 
-                                return (
-                                    <div style={{ backgroundColor: '#fff', padding: '5px', border: '1px solid #ccc' }}>
-                                        <p>{formattedDate}</p>
-                                        {payload.map((entry) => (
-                                            <div key={entry.name} style={{ color: entry.stroke }}>
-                                                {entry.name}: {entry.value}
-                                            </div>
-                                        ))}
-                                    </div>
-                                );
-                            }}
-                        />
+        const formattedDate = date.toLocaleString('fr-FR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // Trier les joueurs par leur score
+        //@ts-ignore
+        const sortedPayload = [...payload].sort((a, b) => a?.value != null ? (b.value as number - a.value as number):0); // Trie par score décroissant
+
+        return (
+            <div style={{ backgroundColor: '#fff', padding: '5px', border: '1px solid #ccc' }}>
+                <p>{formattedDate}</p>
+                {sortedPayload.map((entry) => (
+                    <div key={entry.name} style={{ color: entry.stroke }}>
+                        {entry.name}: {entry.value}
+                    </div>
+                ))}
+            </div>
+        );
+    }}
+/>
+
 
                         {players.map((player) => (
                             <Line
