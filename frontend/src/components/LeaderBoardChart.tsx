@@ -18,6 +18,8 @@ type PlayerData = {
 type FormattedData = {
     isoString: string;
     label: string;
+
+    xPosition: number;
     [playerName: string]: number | string;
 };
 
@@ -95,7 +97,7 @@ export function LeaderboardChart() {
                         if (!mergedData[isoString]) {
                             mergedData[isoString] = {
                                 isoString,
-                                label: new Date(isoString).toLocaleTimeString(),
+                                label: new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }), // Format sans les secondes
                             };
                         }
                         mergedData[isoString][currentPlayer] = entry.totalScore;
@@ -103,17 +105,19 @@ export function LeaderboardChart() {
                 });
 
                 const sortedArray = Object.keys(mergedData)
-                    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())
-                    .map((key) => mergedData[key]);
+                    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())   
+                    .map((key) => mergedData[key]); 
 
                 for (let i = 0; i < sortedArray.length; i++) {
                     for (let j = 0; j < playerNames.length; j++) {
                         const player = playerNames[j];
                         if (sortedArray[i][player] === undefined) {
-                            sortedArray[i][player] = i === 0 ? 0 : sortedArray[i - 1][player] || 0;
+                            sortedArray[i][player] = i === 0 ? 0 : sortedArray[i - 1][player] || 0;  
                         }
                     }
                 }
+
+                setData(sortedArray);
 
                 setData(sortedArray);
             } catch (error) {
@@ -161,15 +165,15 @@ export function LeaderboardChart() {
     if (yMax === Number.NEGATIVE_INFINITY) yMax = 100;
 
     const playerImagePositions = players
-    .map((player) => {
-        if (!data.length) return null;
-        const lastEntry = data[data.length - 1];
-        const lastValue = Number(lastEntry[player]);
-        const pixelTop = lastValue/(yMax/chartHeight) + 15
-        const clampedTop = Math.min(chartHeight, Math.max(0, pixelTop));
-        return { player, pixelTop: clampedTop };
-    })
-    .filter((item): item is { player: string; pixelTop: number } => item !== null);
+        .map((player) => {
+            if (!data.length) return null;
+            const lastEntry = data[data.length - 1];
+            const lastValue = Number(lastEntry[player]);
+            const pixelTop = lastValue / (yMax / chartHeight) + 15
+            const clampedTop = Math.min(chartHeight, Math.max(0, pixelTop));
+            return { player, pixelTop: clampedTop };
+        })
+        .filter((item): item is { player: string; pixelTop: number } => item !== null);
 
 
     return (
@@ -180,7 +184,40 @@ export function LeaderboardChart() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="label" stroke="#000" />
                         <YAxis stroke="#000" domain={[yMin, yMax]} />
-                        <Tooltip />
+                        <Tooltip
+                            content={({ payload, label }) => {
+                                if (!payload || payload.length === 0) return null;
+
+                                const referenceDate = new Date(payload[0]?.payload.isoString);
+                                const fullDateString = `${referenceDate.toISOString().split('T')[0]}T${label}`; 
+
+                                const date = new Date(fullDateString); 
+                                if (isNaN(date.getTime())) {
+                                    console.error("Date invalide:", label);
+                                    return null;
+                                }
+                                const formattedDate = date.toLocaleString('fr-FR', {
+                                    weekday: 'long',  
+                                    year: 'numeric',  
+                                    month: 'long',    
+                                    day: 'numeric',   
+                                    hour: '2-digit',  
+                                    minute: '2-digit'
+                                });
+
+                                return (
+                                    <div style={{ backgroundColor: '#fff', padding: '5px', border: '1px solid #ccc' }}>
+                                        <p>{formattedDate}</p>
+                                        {payload.map((entry) => (
+                                            <div key={entry.name} style={{ color: entry.stroke }}>
+                                                {entry.name}: {entry.value}
+                                            </div>
+                                        ))}
+                                    </div>
+                                );
+                            }}
+                        />
+
                         {players.map((player) => (
                             <Line
                                 key={player}
@@ -195,29 +232,29 @@ export function LeaderboardChart() {
                 </ResponsiveContainer>
             </div>
             <div style={{ width: imagesWidth, height: chartHeight, position: "relative" }}>
-    {playerImagePositions.map(({ player, pixelTop }) => {
-        const imageSize = 30;
-        const borderColor = playerColors[player] || "#000";
-        return (
-            <img
-                key={player}
-                src={`https://mineskin.eu/helm/${player}/100.png`}
-                alt={player}
-                style={{
-                    position: "absolute",
-                    left: -60,
-                    bottom: `${pixelTop}px`,
-                    transform: "translateY(-50%)",
-                    width: imageSize,
-                    height: imageSize,
-                    border: `2px solid ${borderColor}`,
-                    display: "block",
-                    pointerEvents: "none",
-                }}
-            />
-        );
-    })}
-</div>
+                {playerImagePositions.map(({ player, pixelTop }) => {
+                    const imageSize = 30;
+                    const borderColor = playerColors[player] || "#000";
+                    return (
+                        <img
+                            key={player}
+                            src={`https://mineskin.eu/helm/${player}/100.png`}
+                            alt={player}
+                            style={{
+                                position: "absolute",
+                                left: -60,
+                                bottom: `${pixelTop}px`,
+                                transform: "translateY(-50%)",
+                                width: imageSize,
+                                height: imageSize,
+                                border: `2px solid ${borderColor}`,
+                                display: "block",
+                                pointerEvents: "none",
+                            }}
+                        />
+                    );
+                })}
+            </div>
 
         </div>
     );
