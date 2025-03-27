@@ -2,6 +2,10 @@
 @config "../tailwind.config.js";
 @plugin "@tailwindcss/typography";
 
+* {
+  font-family: 'MontSerrat Alternates';
+}
+
 :root {
   font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
   line-height: 1.5;

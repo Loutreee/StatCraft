@@ -11,29 +11,28 @@ import {
 
 type PlayerData = {
     playerName: string;
-    timestamp: string; // Exemple : "2025-03-06T12:52:56.697379092Z"
+    timestamp: string;
     totalScore: number;
 };
 
 type FormattedData = {
-    isoString: string; // Timestamp ISO brut
-    label: string; // Label lisible pour l'axe X (ex: heure locale)
+    isoString: string;
+    label: string;
+
+    xPosition: number;
     [playerName: string]: number | string;
 };
 
-// Calcule la couleur moyenne de l'image passée en paramètre
 function computeAverageColor(img: HTMLImageElement): string {
     const canvas = document.createElement("canvas");
     canvas.width = img.width;
     canvas.height = img.height;
     const ctx = canvas.getContext("2d");
-    if (!ctx) return "#000000"; // Couleur de secours
+    if (!ctx) return "#000000";
     ctx.drawImage(img, 0, 0, img.width, img.height);
     const imageData = ctx.getImageData(0, 0, img.width, img.height);
     const data = imageData.data;
-    let r = 0,
-        g = 0,
-        b = 0;
+    let r = 0, g = 0, b = 0;
     const totalPixels = data.length / 4;
 
     for (let i = 0; i < data.length; i += 4) {
@@ -49,17 +48,13 @@ function computeAverageColor(img: HTMLImageElement): string {
     return `rgb(${r}, ${g}, ${b})`;
 }
 
-// Charge l'image du joueur et calcule la couleur moyenne
 async function loadPlayerColor(playerName: string): Promise<string> {
     return new Promise((resolve, reject) => {
         const img = new Image();
-        img.crossOrigin = "anonymous"; // Nécessaire pour lire les pixels
+        img.crossOrigin = "anonymous";
         img.src = `https://mineskin.eu/helm/${encodeURIComponent(playerName)}/100.png`;
 
-        img.onload = () => {
-            const color = computeAverageColor(img);
-            resolve(color);
-        };
+        img.onload = () => resolve(computeAverageColor(img));
         img.onerror = reject;
     });
 }
@@ -67,41 +62,33 @@ async function loadPlayerColor(playerName: string): Promise<string> {
 export function LeaderboardChart() {
     const [data, setData] = useState<FormattedData[]>([]);
     const [players, setPlayers] = useState<string[]>([]);
-    // Stocke la couleur calculée pour chaque joueur
     const [playerColors, setPlayerColors] = useState<Record<string, string>>({});
 
     const chartMargin = { top: 10, right: 80, left: 10, bottom: 20 };
     const chartHeight = 500;
     const imagesWidth = 80;
 
-    // Récupération des joueurs et de leur historique de scores
     useEffect(() => {
         const fetchData = async () => {
             try {
-                // 1. Récupérer la liste des joueurs
                 const playersResponse = await fetch("/api/players");
-                if (!playersResponse.ok) {
-                    throw new Error("Failed to fetch players");
-                }
+                if (!playersResponse.ok) throw new Error("Failed to fetch players");
+
                 const playersList = await playersResponse.json();
                 const playerNames = playersList.map((p: { name: string }) => p.name);
                 setPlayers(playerNames);
 
-                // 2. Récupérer l'historique des scores pour chaque joueur
-                const scoresPromises = playerNames.map(async (playerName: string) => {
-                    const encodedName = encodeURIComponent(playerName);
-                    const scoreResponse = await fetch(
-                        `/api/score/history/${encodedName}`
-                    );
-                    if (!scoreResponse.ok) {
-                        throw new Error(`Failed to fetch score history for ${playerName}`);
-                    }
-                    return scoreResponse.json();
-                });
+                const scoresPromises = playerNames
+                    .map(async (playerName: string) => {
+                        const encodedName = encodeURIComponent(playerName);
+                        const scoreResponse = await fetch(`/api/score/history/${encodedName}`);
+                        if (!scoreResponse.ok)
+                            throw new Error(`Failed to fetch score history for ${playerName}`);
+                        return scoreResponse.json();
+                    });
 
                 const scoresData = await Promise.all(scoresPromises);
 
-                // 3. Fusionner les données par timestamp
                 const mergedData: Record<string, FormattedData> = {};
                 scoresData.forEach((playerData, index) => {
                     const currentPlayer = playerNames[index];
@@ -109,31 +96,29 @@ export function LeaderboardChart() {
                         const isoString = entry.timestamp;
                         if (!mergedData[isoString]) {
                             mergedData[isoString] = {
+                                xPosition:0,
                                 isoString,
-                                label: new Date(isoString).toLocaleTimeString(),
+                                label: new Date(isoString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                             };
                         }
                         mergedData[isoString][currentPlayer] = entry.totalScore;
                     });
                 });
 
-                // 4. Conversion en tableau et tri par ordre chronologique
                 const sortedArray = Object.keys(mergedData)
-                    .sort(
-                        (a, b) => new Date(a).getTime() - new Date(b).getTime()
-                    )
-                    .map((key) => mergedData[key]);
+                    .sort((a, b) => new Date(a).getTime() - new Date(b).getTime())   
+                    .map((key) => mergedData[key]); 
 
-                // 5. Imputation des valeurs manquantes pour chaque joueur
                 for (let i = 0; i < sortedArray.length; i++) {
                     for (let j = 0; j < playerNames.length; j++) {
                         const player = playerNames[j];
                         if (sortedArray[i][player] === undefined) {
-                            sortedArray[i][player] =
-                                i === 0 ? 0 : sortedArray[i - 1][player] || 0;
+                            sortedArray[i][player] = i === 0 ? 0 : sortedArray[i - 1][player] || 0;  
                         }
                     }
                 }
+
+                setData(sortedArray);
 
                 setData(sortedArray);
             } catch (error) {
@@ -144,35 +129,26 @@ export function LeaderboardChart() {
         fetchData();
     }, []);
 
-    // Charger et calculer la couleur moyenne pour chaque joueur
     useEffect(() => {
         let isCancelled = false;
 
         async function loadAllColors() {
             const newColors: Record<string, string> = {};
-
             for (const player of players) {
                 try {
                     newColors[player] = await loadPlayerColor(player);
-                } catch (err) {
-                    newColors[player] = "#000000"; // Couleur de fallback
+                } catch {
+                    newColors[player] = "#000000";
                 }
                 if (isCancelled) return;
             }
-
             setPlayerColors(newColors);
         }
 
-        if (players.length) {
-            loadAllColors();
-        }
-
-        return () => {
-            isCancelled = true;
-        };
+        if (players.length) loadAllColors();
+        return () => { isCancelled = true; };
     }, [players]);
 
-    // Calculer yMin et yMax sur l'ensemble des données
     let yMin = Number.POSITIVE_INFINITY;
     let yMax = Number.NEGATIVE_INFINITY;
     if (data.length && players.length) {
@@ -189,26 +165,17 @@ export function LeaderboardChart() {
     if (yMin === Number.POSITIVE_INFINITY) yMin = 0;
     if (yMax === Number.NEGATIVE_INFINITY) yMax = 100;
 
-    const effectiveHeight = chartHeight - chartMargin.top - chartMargin.bottom;
-    const getPixelY = (score: number) => {
-        return (
-            chartMargin.top +
-            ((yMax - score) / (yMax - yMin)) * effectiveHeight
-        );
-    };
-
-    // Calculer la position verticale (pixelY) pour afficher les images à droite
     const playerImagePositions = players
         .map((player) => {
             if (!data.length) return null;
             const lastEntry = data[data.length - 1];
             const lastValue = Number(lastEntry[player]);
-            const pixelY = getPixelY(lastValue);
-            return { player, pixelY };
+            const pixelTop = lastValue / (yMax / chartHeight) + 15
+            const clampedTop = Math.min(chartHeight, Math.max(0, pixelTop));
+            return { player, pixelTop: clampedTop };
         })
-        .filter(
-            (item): item is { player: string; pixelY: number } => item !== null
-        );
+        .filter((item): item is { player: string; pixelTop: number } => item !== null);
+
 
     return (
         <div style={{ position: "relative", display: "flex" }}>
@@ -218,13 +185,53 @@ export function LeaderboardChart() {
                         <CartesianGrid strokeDasharray="3 3" />
                         <XAxis dataKey="label" stroke="#000" />
                         <YAxis stroke="#000" domain={[yMin, yMax]} />
-                        <Tooltip />
+                        <Tooltip
+    content={({ payload, label }) => {
+        if (!payload || payload.length === 0) return null;
+
+        // 'label' contient l'heure (par exemple '16:27:29')
+        // Utiliser le timestamp pour générer la date complète
+        const referenceDate = new Date(payload[0]?.payload.isoString);
+        const fullDateString = `${referenceDate.toISOString().split('T')[0]}T${label}`; 
+
+        const date = new Date(fullDateString);
+        if (isNaN(date.getTime())) {
+            console.error("Date invalide:", label);
+            return null; // Si la date est invalide, ne rien afficher
+        }
+
+        const formattedDate = date.toLocaleString('fr-FR', {
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+
+        // Trier les joueurs par leur score
+        //@ts-ignore
+        const sortedPayload = [...payload].sort((a, b) => a?.value != null ? (b.value as number - a.value as number):0); // Trie par score décroissant
+
+        return (
+            <div style={{ backgroundColor: '#fff', padding: '5px', border: '1px solid #ccc' }}>
+                <p>{formattedDate}</p>
+                {sortedPayload.map((entry) => (
+                    <div key={entry.name} style={{ color: entry.stroke }}>
+                        {entry.name}: {entry.value}
+                    </div>
+                ))}
+            </div>
+        );
+    }}
+/>
+
+
                         {players.map((player) => (
                             <Line
                                 key={player}
                                 type="monotone"
                                 dataKey={player}
-                                // Utilise la couleur moyenne calculée pour la courbe
                                 stroke={playerColors[player] || "#000"}
                                 strokeWidth={3}
                                 dot={false}
@@ -233,10 +240,9 @@ export function LeaderboardChart() {
                     </LineChart>
                 </ResponsiveContainer>
             </div>
-            <div style={{ width: imagesWidth, position: "relative" }}>
-                {playerImagePositions.map(({ player, pixelY }) => {
+            <div style={{ width: imagesWidth, height: chartHeight, position: "relative" }}>
+                {playerImagePositions.map(({ player, pixelTop }) => {
                     const imageSize = 30;
-                    players.indexOf(player);
                     const borderColor = playerColors[player] || "#000";
                     return (
                         <img
@@ -246,15 +252,19 @@ export function LeaderboardChart() {
                             style={{
                                 position: "absolute",
                                 left: -60,
-                                top: pixelY - imageSize,
+                                bottom: `${pixelTop}px`,
+                                transform: "translateY(-50%)",
                                 width: imageSize,
                                 height: imageSize,
                                 border: `2px solid ${borderColor}`,
+                                display: "block",
+                                pointerEvents: "none",
                             }}
                         />
                     );
                 })}
             </div>
+
         </div>
     );
 }
